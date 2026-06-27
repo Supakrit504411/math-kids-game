@@ -30,9 +30,26 @@ html, body {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
-    max-width: 100vw;
     overflow: hidden;
     background: #667eea;
+}
+
+/* มือถือ: จัดกลาง + scale wrapper */
+#game-container.use-scale {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* พื้นหลังแนวตั้ง — CSS cover เต็มจอ (Kaboom canvas โปร่งใส) */
+#game-container.mobile-portrait-bg {
+    background: #667eea url('../assets/bg-mobile.png') center center / cover no-repeat;
+}
+
+#game-scale {
+    position: relative;
+    transform-origin: center center;
+    flex-shrink: 0;
 }
 
 #game-ui-overlay {
@@ -47,8 +64,7 @@ html, body {
 
 #gameCanvas {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
@@ -56,6 +72,7 @@ html, body {
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    background: transparent;
 }
 
 /* DOM panels (ชื่อเล่น, leaderboard) */
@@ -76,6 +93,26 @@ html, body {
     gap: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     border: 2px solid rgba(255, 255, 255, 0.12);
+    /* ลดการเลื่อนหน้าจอตอนโฟกัส input บนมือถือ */
+    overscroll-behavior: contain;
+}
+
+/* ฟอร์มกรอกชื่อ — วางด้านบนมือถือ ไม่ให้คีย์บอร์ดบัง */
+.dom-panel--name {
+    top: 12%;
+    transform: translate(-50%, 0);
+}
+
+@media (max-width: 768px) {
+    .dom-panel--name {
+        top: 8%;
+        width: 94vw;
+        max-height: none;
+    }
+
+    .dom-panel--name .dom-input {
+        font-size: 16px; /* ป้องกัน iOS zoom เมื่อ focus */
+    }
 }
 
 .dom-panel h2 {

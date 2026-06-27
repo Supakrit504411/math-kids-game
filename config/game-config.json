@@ -79,8 +79,8 @@
     "leaderboard": {
         "enabled": true,
         "maxEntries": 50,
-        "supabaseUrl": "",
-        "supabaseAnonKey": "",
+        "supabaseUrl": "https://iwmmrvtwbjddwxdfqemz.supabase.co",
+        "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1dXB0cHR1dXJjeGZvb2RhZXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NjcyNTMsImV4cCI6MjA5ODE0MzI1M30.Vh3OuXA2Kl2MhmdP_Y8FhsrfoZncog_mWg_R2uw1jnM",
         "table": "leaderboard"
     }
 }

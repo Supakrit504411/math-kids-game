@@ -4,7 +4,12 @@
  */
 
 import { GameEngine } from './engine/game-engine.js';
-import { getGameDimensions, syncCanvasToContainer } from './utils/viewport.js';
+import {
+    getGameDimensions,
+    applyDisplayLayout,
+    isVirtualKeyboardOpen,
+    isPortrait,
+} from './utils/viewport.js';
 
 async function init() {
     const kaboomModule = await import('https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs');
@@ -12,57 +17,73 @@ async function init() {
 
     const config = await loadConfig();
     const canvas = document.getElementById('gameCanvas');
-    const root = document.getElementById('game-container');
+    const scaleRoot = document.getElementById('game-scale');
     const dims = getGameDimensions(config);
 
-    syncCanvasToContainer(canvas);
+    applyDisplayLayout(dims);
 
     const k = kaboom({
         width: dims.width,
         height: dims.height,
         canvas,
-        root: root || document.body,
-        stretch: true,
+        root: scaleRoot || document.body,
+        stretch: !dims.scaleMode,
         letterbox: false,
         crisp: false,
-        pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
-        background: [102, 126, 234],
+        pixelDensity: dims.scaleMode ? 1 : Math.min(window.devicePixelRatio || 1, 2),
+        background: dims.cssBg ? [0, 0, 0, 0] : [102, 126, 234],
         globals: true,
         font: 'kanit',
     });
 
     k.loadFont('kanit', 'assets/fonts/Kanit-Regular.ttf');
     k.loadSprite('bg', 'assets/bg.png');
+    k.loadSprite('bg-mobile', 'assets/bg-mobile.png');
 
     await waitKaboomLoad(k);
 
-    syncCanvasToContainer(canvas);
-
-    // ลบ canvas ซ้ำถ้า Kaboom สร้างเพิ่ม
     document.querySelectorAll('canvas').forEach((c) => {
         if (c !== canvas) c.remove();
     });
 
+    applyDisplayLayout(dims);
+
     const gameEngine = new GameEngine();
     gameEngine.setConfig(config);
+    gameEngine.setDisplayMode(dims);
     gameEngine.sound.enabled = !gameEngine.uiManager.isMuted();
     gameEngine.markAssetsReady();
     window.gameEngine = gameEngine;
     gameEngine.initContext(k, canvas);
 
-    const refreshLayout = () => {
-        syncCanvasToContainer(canvas);
-        gameEngine.onViewportResize?.();
+    let wasPortrait = isPortrait();
+
+    const refreshLayout = (redrawScene = false) => {
+        const nextDims = getGameDimensions(config);
+        applyDisplayLayout(nextDims);
+        gameEngine.setDisplayMode(nextDims);
+
+        const nowPortrait = isPortrait();
+        const orientationChanged = nowPortrait !== wasPortrait;
+        wasPortrait = nowPortrait;
+
+        if (
+            redrawScene &&
+            orientationChanged &&
+            !isVirtualKeyboardOpen() &&
+            gameEngine.shouldRedrawOnResize?.()
+        ) {
+            gameEngine.onViewportResize?.();
+        }
     };
 
-    k.onResize(refreshLayout);
-    window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 200));
-    window.addEventListener('resize', () => syncCanvasToContainer(canvas));
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', refreshLayout);
-    }
+    k.onResize(() => refreshLayout(true));
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => refreshLayout(true), 350);
+    });
+    window.addEventListener('resize', () => applyDisplayLayout(getGameDimensions(config)));
 
-    console.log('Math Kids Game Ready!', `${dims.width}x${dims.height}`);
+    console.log('Math Kids Game Ready!', `${dims.width}x${dims.height}`, dims.scaleMode ? 'scale-mode' : 'stretch');
 }
 
 function waitKaboomLoad(k) {

@@ -15,13 +15,13 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Canvas สำหรับ Kaboom.js (ต้องส่ง canvas นี้เข้า kaboom() — ไม่งั้น Kaboom สร้าง canvas ใหม่ที่ไม่มี CSS) -->
-        <canvas id="gameCanvas"></canvas>
-        <!-- ข้อความภาษาไทย (Kaboom canvas วัด glyph ไทยไม่ได้ → width 0) -->
-        <div id="game-ui-overlay" aria-hidden="true"></div>
+        <!-- wrapper 720×1280 บนมือถือ แล้ว scale ด้วย CSS ให้เต็มจอ -->
+        <div id="game-scale">
+            <canvas id="gameCanvas"></canvas>
+            <div id="game-ui-overlay" aria-hidden="true"></div>
+        </div>
     </div>
 
-    <!-- Game Modules (Kaboom.js โหลดใน main.js แล้ว) -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

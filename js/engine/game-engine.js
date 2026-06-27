@@ -108,6 +108,17 @@ export class GameEngine {
         this._bgLoaded = false;
         this.domPanels = [];
         this._lastGameResult = null;
+        this._blockViewportRefresh = false;
+        this._bgMobileLoaded = true;
+        this._displayMode = { scaleMode: false, cssBg: false };
+    }
+
+    setDisplayMode(dims) {
+        this._displayMode = dims || { scaleMode: false, cssBg: false };
+    }
+
+    _useCssMobileBg() {
+        return !!this._displayMode?.cssBg;
     }
 
     setConfig(config) {
@@ -138,9 +149,20 @@ export class GameEngine {
         console.log('GameEngine initialized');
     }
 
-    /** เรียกเมื่อหมุนจอ / resize — วาด scene ปัจจุบันใหม่ให้ overlay ตรงตำแหน่ง */
+    /** เรียกเมื่อหมุนจอ — ไม่ redraw ตอนกรอกชื่อ/คีย์บอร์ดเปิด */
+    shouldRedrawOnResize() {
+        if (this._blockViewportRefresh) return false;
+        if (this._currentSceneName === 'enter-name' || this._currentSceneName === 'leaderboard') {
+            return false;
+        }
+        const active = document.activeElement;
+        if (active && active.closest?.('.dom-panel')) return false;
+        return true;
+    }
+
     onViewportResize() {
         if (!this.k || !this._currentSceneName) return;
+        if (!this.shouldRedrawOnResize()) return;
         const scene = this._currentSceneName;
         if (scene === 'game' && this.gameRunning) {
             const diff = this.currentDifficulty;
@@ -156,6 +178,7 @@ export class GameEngine {
     }
 
     _isMobileLayout() {
+        if (this._displayMode?.scaleMode) return true;
         const W = this.k.width();
         const H = this.k.height();
         return W < 800 || H > W;
@@ -165,9 +188,20 @@ export class GameEngine {
         if (!this._bgLoaded) return;
         const W = this.k.width();
         const H = this.k.height();
+
+        if (this._useCssMobileBg()) {
+            this._addRect(0, 0, W, H, [0, 0, 30, 90], 0);
+            return;
+        }
+
+        const spriteKey = (this._isMobileLayout() && this._bgMobileLoaded) ? 'bg-mobile' : 'bg';
+        const sx = spriteKey === 'bg-mobile' ? W / 720 : W / 1280;
+        const sy = spriteKey === 'bg-mobile' ? H / 1280 : H / 720;
         const bg = this.k.add([
-            this.k.sprite('bg', { width: W, height: H }),
-            this.k.pos(0, 0),
+            this.k.sprite(spriteKey),
+            this.k.pos(W / 2, H / 2),
+            this.k.anchor('center'),
+            this.k.scale(sx, sy),
             this.k.z(-1),
         ]);
         this.gameObjects.push(bg);
@@ -323,6 +357,9 @@ export class GameEngine {
             if (el && el.remove) try { el.remove(); } catch (e) { }
         }
         this.domPanels = [];
+        if (!document.querySelector('.dom-panel .dom-input:focus')) {
+            this._blockViewportRefresh = false;
+        }
     }
 
     _getDomOverlay() {
@@ -338,13 +375,15 @@ export class GameEngine {
 
     _showNameEntryPanel(onDone) {
         this._destroyDomPanels();
+        this._blockViewportRefresh = true;
+
         const overlay = this._getDomOverlay();
         const panel = document.createElement('div');
-        panel.className = 'dom-panel';
+        panel.className = 'dom-panel dom-panel--name';
         panel.innerHTML = `
             <h2>ลงชื่อเล่น</h2>
             <p class="hint">ใส่ชื่อของคุณเพื่อบันทึกคะแนนและแข่งขันอันดับ</p>
-            <input class="dom-input" type="text" maxlength="16" placeholder="ชื่อเล่น 2-16 ตัว" autocomplete="nickname" />
+            <input class="dom-input" type="text" maxlength="16" placeholder="ชื่อเล่น 2-16 ตัว" autocomplete="nickname" inputmode="text" enterkeyhint="done" />
             <div class="dom-error"></div>
             <div class="dom-btn-row">
                 <button type="button" class="dom-btn dom-btn-primary" data-action="save">บันทึกและเล่น</button>
@@ -357,13 +396,18 @@ export class GameEngine {
         const errEl = panel.querySelector('.dom-error');
         if (this.playerProfile.getName()) input.value = this.playerProfile.getName();
 
+        const finish = () => {
+            this._blockViewportRefresh = false;
+            this._destroyDomPanels();
+        };
+
         const save = () => {
             const result = this.playerProfile.setName(input.value);
             if (!result.ok) {
                 errEl.textContent = result.error;
                 return;
             }
-            this._destroyDomPanels();
+            finish();
             if (onDone) onDone();
         };
 
@@ -371,11 +415,22 @@ export class GameEngine {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') save();
         });
-        setTimeout(() => input.focus(), 100);
+        input.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!panel.contains(document.activeElement)) {
+                    this._blockViewportRefresh = false;
+                }
+            }, 200);
+        });
+
+        requestAnimationFrame(() => {
+            try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+        });
     }
 
     async _showLeaderboardPanel() {
         this._destroyDomPanels();
+        this._blockViewportRefresh = true;
         const entries = this.leaderboardService
             ? await this.leaderboardService.fetchEntries()
             : [];
@@ -435,10 +490,12 @@ export class GameEngine {
         this.domPanels.push(panel);
 
         panel.querySelector('[data-action="back"]').addEventListener('click', () => {
+            this._blockViewportRefresh = false;
             this._destroyDomPanels();
             this.k.go('main-menu');
         });
         panel.querySelector('[data-action="rename"]').addEventListener('click', () => {
+            this._blockViewportRefresh = false;
             this._destroyDomPanels();
             this.k.go('enter-name');
         });
