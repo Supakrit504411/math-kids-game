@@ -10,6 +10,8 @@
 import { UIManager } from '../modules/ui-manager.js';
 import { QuestSystem } from '../modules/quest-system.js';
 import { MathGame } from '../games/math-game.js';
+import { PlayerProfile } from '../modules/player-profile.js';
+import { LeaderboardService } from '../modules/leaderboard-service.js';
 import { generateOptions } from '../utils/helpers.js';
 
 // Sound Engine - Web Audio API + SpeechSynthesis (เสียงไทย)
@@ -74,6 +76,8 @@ class SoundEngine {
 export class GameEngine {
     constructor() {
         this.uiManager = new UIManager();
+        this.playerProfile = new PlayerProfile();
+        this.leaderboardService = null;
         this.sound = new SoundEngine();
         this.questSystem = new QuestSystem();
         this.mathGame = null; // สร้างตอน startGame ตาม difficulty
@@ -102,10 +106,13 @@ export class GameEngine {
         this.keyHandlerBound = this._onKeyDown.bind(this);
         this._showingAnswer = false;
         this._bgLoaded = false;
+        this.domPanels = [];
+        this._lastGameResult = null;
     }
 
     setConfig(config) {
         this.config = config || null;
+        this.leaderboardService = new LeaderboardService(this.config);
     }
 
     /** เรียกจาก main.js หลัง k.onLoad (font + bg พร้อมแล้ว) */
@@ -222,17 +229,6 @@ export class GameEngine {
         this.clickableAreas = [];
     }
 
-  _getDomOverlay() {
-        let el = document.getElementById('game-ui-overlay');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'game-ui-overlay';
-            el.setAttribute('aria-hidden', 'true');
-            document.body.appendChild(el);
-        }
-        return el;
-    }
-
     /** ข้อความ non-ASCII (ไทย) — ใช้ DOM แทน Kaboom text เพื่อหลีกเลี่ยง getImageData width 0 */
     _addDomText(str, x, y, size, colorVal) {
         const W = this.k.width();
@@ -302,6 +298,7 @@ export class GameEngine {
     }
 
     _clearAll() {
+        this._destroyDomPanels();
         for (const obj of this.gameObjects) {
             if (obj && obj.destroy) try { obj.destroy(); } catch (e) { }
         }
@@ -321,13 +318,193 @@ export class GameEngine {
         this.pauseOverlayObjs = [];
     }
 
+    _destroyDomPanels() {
+        for (const el of this.domPanels) {
+            if (el && el.remove) try { el.remove(); } catch (e) { }
+        }
+        this.domPanels = [];
+    }
+
+    _getDomOverlay() {
+        let el = document.getElementById('game-ui-overlay');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'game-ui-overlay';
+            el.setAttribute('aria-hidden', 'true');
+            document.getElementById('game-container')?.appendChild(el) || document.body.appendChild(el);
+        }
+        return el;
+    }
+
+    _showNameEntryPanel(onDone) {
+        this._destroyDomPanels();
+        const overlay = this._getDomOverlay();
+        const panel = document.createElement('div');
+        panel.className = 'dom-panel';
+        panel.innerHTML = `
+            <h2>ลงชื่อเล่น</h2>
+            <p class="hint">ใส่ชื่อของคุณเพื่อบันทึกคะแนนและแข่งขันอันดับ</p>
+            <input class="dom-input" type="text" maxlength="16" placeholder="ชื่อเล่น 2-16 ตัว" autocomplete="nickname" />
+            <div class="dom-error"></div>
+            <div class="dom-btn-row">
+                <button type="button" class="dom-btn dom-btn-primary" data-action="save">บันทึกและเล่น</button>
+            </div>
+        `;
+        overlay.appendChild(panel);
+        this.domPanels.push(panel);
+
+        const input = panel.querySelector('.dom-input');
+        const errEl = panel.querySelector('.dom-error');
+        if (this.playerProfile.getName()) input.value = this.playerProfile.getName();
+
+        const save = () => {
+            const result = this.playerProfile.setName(input.value);
+            if (!result.ok) {
+                errEl.textContent = result.error;
+                return;
+            }
+            this._destroyDomPanels();
+            if (onDone) onDone();
+        };
+
+        panel.querySelector('[data-action="save"]').addEventListener('click', save);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') save();
+        });
+        setTimeout(() => input.focus(), 100);
+    }
+
+    async _showLeaderboardPanel() {
+        this._destroyDomPanels();
+        const entries = this.leaderboardService
+            ? await this.leaderboardService.fetchEntries()
+            : [];
+
+        const overlay = this._getDomOverlay();
+        const panel = document.createElement('div');
+        panel.className = 'dom-panel';
+
+        let rows = '';
+        if (entries.length === 0) {
+            rows = '<div class="leaderboard-empty">ยังไม่มีคะแนน — เริ่มเล่นเพื่อขึ้นอันดับ!</div>';
+        } else {
+            rows = entries.map((e, i) => {
+                const rank = i + 1;
+                const topClass = rank <= 3 ? `top${rank}` : '';
+                const date = e.playedAt ? new Date(e.playedAt).toLocaleDateString('th-TH') : '-';
+                return `<tr class="${topClass}">
+                    <td>${rank}</td>
+                    <td>${this._escapeHtml(e.playerName)}</td>
+                    <td>${e.score}</td>
+                    <td>${this._escapeHtml(e.difficultyName || '-')}</td>
+                    <td>Lv.${e.maxLevel || 1}</td>
+                    <td>${date}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        const cloudNote = (this.config?.leaderboard?.supabaseUrl)
+            ? 'อันดับรวมจากทุกผู้เล่น'
+            : 'อันดับบนเครื่องนี้ (ตั้งค่า Supabase เพื่อแข่งขันรวม)';
+
+        panel.innerHTML = `
+            <h2>กระดานผู้นำ</h2>
+            <p class="hint">${cloudNote}</p>
+            <div class="leaderboard-scroll">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>ชื่อ</th>
+                            <th>คะแนน</th>
+                            <th>ระดับ</th>
+                            <th>Level</th>
+                            <th>วันที่</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <p class="leaderboard-note">คะแนนแยกตามระดับ: ง่าย / ปานกลาง / ยาก</p>
+            <div class="dom-btn-row">
+                <button type="button" class="dom-btn dom-btn-secondary" data-action="back">กลับ</button>
+                <button type="button" class="dom-btn dom-btn-accent" data-action="rename">เปลี่ยนชื่อ</button>
+            </div>
+        `;
+        overlay.appendChild(panel);
+        this.domPanels.push(panel);
+
+        panel.querySelector('[data-action="back"]').addEventListener('click', () => {
+            this._destroyDomPanels();
+            this.k.go('main-menu');
+        });
+        panel.querySelector('[data-action="rename"]').addEventListener('click', () => {
+            this._destroyDomPanels();
+            this.k.go('enter-name');
+        });
+    }
+
+    _escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    async _submitGameResult() {
+        if (!this.leaderboardService || !this.playerProfile.hasName()) return null;
+        const diffName = this.leaderboardService.getDifficultyLabel(this.currentDifficulty, this.config);
+        const entry = {
+            playerName: this.playerProfile.getName(),
+            score: this.uiManager.getScore(),
+            difficulty: this.currentDifficulty,
+            difficultyName: diffName,
+            maxLevel: this.uiManager.getLevel(),
+        };
+        this._lastGameResult = entry;
+        try {
+            const rank = await this.leaderboardService.submit(entry);
+            return rank;
+        } catch (e) {
+            console.warn('Leaderboard submit failed:', e);
+            return null;
+        }
+    }
+
     _setupScenes() {
         const k = this.k;
+        k.scene('enter-name', () => { this._currentSceneName = 'enter-name'; this._drawEnterNameScene(); });
         k.scene('main-menu', () => { this._currentSceneName = 'main-menu'; this._drawMainMenu(); });
+        k.scene('leaderboard', () => { this._currentSceneName = 'leaderboard'; this._drawLeaderboardScene(); });
         k.scene('game', () => { this._currentSceneName = 'game'; this._drawGameScene(); });
         k.scene('settings', () => { this._currentSceneName = 'settings'; this._drawSettings(); });
         k.scene('game-over', () => { this._currentSceneName = 'game-over'; this._drawGameOverScene(); });
-        k.go('main-menu');
+
+        if (!this.playerProfile.hasName()) {
+            k.go('enter-name');
+        } else {
+            k.go('main-menu');
+        }
+    }
+
+    _drawEnterNameScene() {
+        this._clearAll();
+        const W = this.k.width();
+        const H = this.k.height();
+        this._addBackground();
+        this._addRect(0, 0, W, H, [0, 0, 30, 140], 0);
+        this._addText('MATH KIDS', W / 2, H * 0.18, this._isMobileLayout() ? 48 : 64, [255, 230, 109]);
+        this._showNameEntryPanel(() => this.k.go('main-menu'));
+    }
+
+    _drawLeaderboardScene() {
+        this._clearAll();
+        const W = this.k.width();
+        const H = this.k.height();
+        this._addBackground();
+        this._addRect(0, 0, W, H, [0, 0, 30, 140], 0);
+        this._showLeaderboardPanel();
     }
 
     _getDiffConfig(level) {
@@ -358,22 +535,37 @@ export class GameEngine {
         this._addText('KIDS', W * 0.65, titleY, titleSize, [78, 205, 196]);
         this._addText('เกมเรียนคณิตศาสตร์สนุกๆ!', W / 2, mobile ? 170 : 210, mobile ? 24 : 30, [255, 255, 255]);
 
+        const playerName = this.playerProfile.getName();
+        if (playerName) {
+            this._addText('สวัสดี, ' + playerName + '!', W / 2, mobile ? 200 : 240, mobile ? 20 : 24, [255, 215, 0]);
+        }
+
         const btnW = mobile ? Math.min(280, W - 48) : 280;
-        const btnH = mobile ? 64 : 72;
+        const btnH = mobile ? 58 : 72;
         const btnX = W / 2 - btnW / 2;
-        const startY = mobile ? 260 : 310;
+        const startY = mobile ? 240 : 310;
+        const gap = mobile ? 16 : 24;
 
         this._addRect(btnX, startY, btnW, btnH, [255, 80, 80], 14);
-        this._addText('START GAME', W / 2, startY + btnH / 2 + 2, mobile ? 28 : 32, [255, 255, 255]);
+        this._addText('START GAME', W / 2, startY + btnH / 2 + 2, mobile ? 26 : 32, [255, 255, 255]);
         this._addClickable(btnX, startY, btnW, btnH, () => {
+            if (!this.playerProfile.hasName()) {
+                this.k.go('enter-name');
+                return;
+            }
             this.questionCount = 0;
             this.isBoss = false;
             this.k.go('game');
         });
 
-        const settingsY = startY + btnH + (mobile ? 24 : 38);
+        const lbY = startY + btnH + gap;
+        this._addRect(btnX, lbY, btnW, btnH, [255, 200, 60], 14);
+        this._addText('LEADERBOARD', W / 2, lbY + btnH / 2 + 2, mobile ? 24 : 28, [40, 40, 60]);
+        this._addClickable(btnX, lbY, btnW, btnH, () => this.k.go('leaderboard'));
+
+        const settingsY = lbY + btnH + gap;
         this._addRect(btnX, settingsY, btnW, btnH, [100, 180, 255], 14);
-        this._addText('SETTINGS', W / 2, settingsY + btnH / 2 + 2, mobile ? 28 : 32, [255, 255, 255]);
+        this._addText('SETTINGS', W / 2, settingsY + btnH / 2 + 2, mobile ? 26 : 32, [255, 255, 255]);
         this._addClickable(btnX, settingsY, btnW, btnH, () => this.k.go('settings'));
 
         // ปุ่ม Mute (เปิด/ปิดเสียง)
@@ -923,6 +1115,11 @@ export class GameEngine {
         this._addRect(bX, bY, btnW, btnH, [255, 100, 100], 12);
         this._addText('BACK', W / 2, bY + btnH / 2 + 2, 26, [255, 255, 255]);
         this._addClickable(bX, bY, btnW, btnH, () => this.k.go('main-menu'));
+
+        const nameY = bY + btnH + 20;
+        this._addRect(bX, nameY, btnW, btnH, [180, 140, 255], 12);
+        this._addText('เปลี่ยนชื่อเล่น', W / 2, nameY + btnH / 2 + 2, 22, [255, 255, 255]);
+        this._addClickable(bX, nameY, btnW, btnH, () => this.k.go('enter-name'));
     }
 
     // ====== GAME OVER ======
@@ -933,27 +1130,63 @@ export class GameEngine {
 
         const W = this.k.width();
         const H = this.k.height();
+        const mobile = this._isMobileLayout();
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 0, 180], 0);
-        this._addText('GAME OVER', W / 2, 160, 68, [255, 80, 80]);
-        this._addText('Score: ' + this.uiManager.getScore(), W / 2, 250, 42, [255, 255, 255]);
-        this._addText('Level: ' + this.uiManager.getLevel(), W / 2, 300, 28, [255, 215, 0]);
-        this._addText('Max Combo: ' + this.uiManager.getMaxCombo(), W / 2, 340, 24, [255, 200, 100]);
-        const hs = this.uiManager.getHighScore();
-        if (hs > 0) this._addText('High Score: ' + hs, W / 2, 380, 26, [255, 215, 0]);
 
-        const btnW = 200, btnH = 60;
-        const pX = W / 2 - btnW - 20, pY = 450;
-        this._addRect(pX, pY, btnW, btnH, [100, 220, 100], 12);
-        this._addText('เล่นอีกครั้ง', pX + btnW / 2, pY + btnH / 2 + 2, 22, [255, 255, 255]);
-        this._addClickable(pX, pY, btnW, btnH, () => {
-            this.questionCount = 0; this.isBoss = false; this.k.go('game');
+        const diffName = this.leaderboardService
+            ? this.leaderboardService.getDifficultyLabel(this.currentDifficulty, this.config)
+            : 'ง่าย';
+
+        this._addText('GAME OVER', W / 2, mobile ? 120 : 160, mobile ? 52 : 68, [255, 80, 80]);
+        this._addText('Score: ' + this.uiManager.getScore(), W / 2, mobile ? 190 : 250, mobile ? 32 : 42, [255, 255, 255]);
+        this._addText('ระดับ: ' + diffName, W / 2, mobile ? 230 : 300, mobile ? 22 : 28, [255, 215, 0]);
+        this._addText('Level สูงสุด: ' + this.uiManager.getLevel(), W / 2, mobile ? 265 : 340, mobile ? 22 : 28, [255, 200, 100]);
+        this._addText('Max Combo: ' + this.uiManager.getMaxCombo(), W / 2, mobile ? 300 : 380, mobile ? 20 : 24, [255, 200, 100]);
+
+        const rankY = mobile ? 335 : 420;
+        const rankTextObj = this._addText('กำลังบันทึกคะแนน...', W / 2, rankY, mobile ? 20 : 24, [100, 220, 100]);
+
+        this._submitGameResult().then((rank) => {
+            if (rankTextObj) {
+                rankTextObj.text = rank
+                    ? 'อันดับของคุณ: #' + rank
+                    : 'บันทึกคะแนนแล้ว';
+            }
         });
 
-        const mX = W / 2 + 20, mY = 450;
-        this._addRect(mX, mY, btnW, btnH, [200, 200, 210], 12);
-        this._addText('MENU', mX + btnW / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
-        this._addClickable(mX, mY, btnW, btnH, () => this.k.go('main-menu'));
+        const hs = this.uiManager.getHighScore();
+        if (hs > 0) {
+            this._addText('High Score: ' + hs, W / 2, mobile ? 370 : 460, mobile ? 20 : 26, [255, 215, 0]);
+        }
+
+        const btnW = mobile ? Math.min(240, W - 48) : 200;
+        const btnH = mobile ? 54 : 60;
+        const btnY = mobile ? H - 140 : 450;
+
+        if (mobile) {
+            const pX = W / 2 - btnW / 2;
+            this._addRect(pX, btnY, btnW, btnH, [100, 220, 100], 12);
+            this._addText('เล่นอีกครั้ง', W / 2, btnY + btnH / 2 + 2, 22, [255, 255, 255]);
+            this._addClickable(pX, btnY, btnW, btnH, () => {
+                this.questionCount = 0; this.isBoss = false; this.k.go('game');
+            });
+            const mY = btnY + btnH + 12;
+            this._addRect(pX, mY, btnW, btnH, [200, 200, 210], 12);
+            this._addText('MENU', W / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
+            this._addClickable(pX, mY, btnW, btnH, () => this.k.go('main-menu'));
+        } else {
+            const pX = W / 2 - btnW - 20, pY = btnY;
+            this._addRect(pX, pY, btnW, btnH, [100, 220, 100], 12);
+            this._addText('เล่นอีกครั้ง', pX + btnW / 2, pY + btnH / 2 + 2, 22, [255, 255, 255]);
+            this._addClickable(pX, pY, btnW, btnH, () => {
+                this.questionCount = 0; this.isBoss = false; this.k.go('game');
+            });
+            const mX = W / 2 + 20, mY = btnY;
+            this._addRect(mX, mY, btnW, btnH, [200, 200, 210], 12);
+            this._addText('MENU', mX + btnW / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
+            this._addClickable(mX, mY, btnW, btnH, () => this.k.go('main-menu'));
+        }
     }
 
     startGame(difficulty) {

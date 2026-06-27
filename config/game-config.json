@@ -75,5 +75,12 @@
         "success": "#6BCB77",
         "danger": "#FF6B6B",
         "info": "#4D96FF"
+    },
+    "leaderboard": {
+        "enabled": true,
+        "maxEntries": 50,
+        "supabaseUrl": "",
+        "supabaseAnonKey": "",
+        "table": "leaderboard"
     }
 }

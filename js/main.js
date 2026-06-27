@@ -4,22 +4,7 @@
  */
 
 import { GameEngine } from './engine/game-engine.js';
-
-/** ขนาด logical ของเกม — มือถือแนวตั้งใช้ 720x1280 เพื่อ layout ที่เหมาะกับจอ */
-function getGameDimensions(config) {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const isPortrait = vh > vw;
-    const isMobile = vw <= 900 || 'ontouchstart' in window;
-
-    if (isMobile && isPortrait) {
-        return { width: 720, height: 1280 };
-    }
-    return {
-        width: config.display?.width || 1280,
-        height: config.display?.height || 720,
-    };
-}
+import { getGameDimensions, syncCanvasToContainer } from './utils/viewport.js';
 
 async function init() {
     const kaboomModule = await import('https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs');
@@ -30,6 +15,8 @@ async function init() {
     const root = document.getElementById('game-container');
     const dims = getGameDimensions(config);
 
+    syncCanvasToContainer(canvas);
+
     const k = kaboom({
         width: dims.width,
         height: dims.height,
@@ -38,16 +25,23 @@ async function init() {
         stretch: true,
         letterbox: false,
         crisp: false,
+        pixelDensity: Math.min(window.devicePixelRatio || 1, 2),
         background: [102, 126, 234],
         globals: true,
         font: 'kanit',
     });
 
-    // ลงทะเบียน assets ก่อน — ต้องรอ onLoad ก่อนสร้าง text (โดยเฉพาะภาษาไทย)
     k.loadFont('kanit', 'assets/fonts/Kanit-Regular.ttf');
     k.loadSprite('bg', 'assets/bg.png');
 
     await waitKaboomLoad(k);
+
+    syncCanvasToContainer(canvas);
+
+    // ลบ canvas ซ้ำถ้า Kaboom สร้างเพิ่ม
+    document.querySelectorAll('canvas').forEach((c) => {
+        if (c !== canvas) c.remove();
+    });
 
     const gameEngine = new GameEngine();
     gameEngine.setConfig(config);
@@ -56,18 +50,21 @@ async function init() {
     window.gameEngine = gameEngine;
     gameEngine.initContext(k, canvas);
 
-    // รีเฟรช layout เมื่อหมุนจอ / resize (มือถือ)
-    k.onResize(() => {
+    const refreshLayout = () => {
+        syncCanvasToContainer(canvas);
         gameEngine.onViewportResize?.();
-    });
-    window.addEventListener('orientationchange', () => {
-        setTimeout(() => gameEngine.onViewportResize?.(), 150);
-    });
+    };
+
+    k.onResize(refreshLayout);
+    window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 200));
+    window.addEventListener('resize', () => syncCanvasToContainer(canvas));
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', refreshLayout);
+    }
 
     console.log('Math Kids Game Ready!', `${dims.width}x${dims.height}`);
 }
 
-/** รอจน Kaboom โหลด font + sprite เสร็จ */
 function waitKaboomLoad(k) {
     return new Promise((resolve) => {
         let done = false;
@@ -77,7 +74,6 @@ function waitKaboomLoad(k) {
             resolve();
         };
         k.onLoad(finish);
-        // สำรอง: ถ้าโหลดเสร็จแล้วหรือ onLoad ไม่ fire
         setTimeout(finish, 5000);
     });
 }
@@ -102,11 +98,9 @@ function getDefaultConfig() {
                 { name: 'ยาก', maxNumber: 50, operations: ['+', '-', '*'], spawnInterval: 2000 },
             ],
         },
-        gameplay: {
-            startingLives: 3,
-            pointsPerCorrect: 10,
-        },
+        gameplay: { startingLives: 3, pointsPerCorrect: 10 },
         audio: { bgmVolume: 0.5, sfxVolume: 0.7 },
+        leaderboard: { enabled: true, maxEntries: 50 },
     };
 }
 
