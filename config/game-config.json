@@ -1,0 +1,72 @@
+{
+    "game": {
+        "name": "Math Kids Game",
+        "version": "1.0.0",
+        "language": "th"
+    },
+    "display": {
+        "width": 1280,
+        "height": 720,
+        "pixelArt": false,
+        "scale": 1,
+        "fullscreen": false
+    },
+    "difficulty": {
+        "levels": [
+            {
+                "name": "ง่าย",
+                "maxNumber": 10,
+                "operations": ["+"],
+                "spawnInterval": 3000,
+                "fallSpeed": "slow",
+                "bossThreshold": 10
+            },
+            {
+                "name": "ปานกลาง",
+                "maxNumber": 20,
+                "operations": ["+", "-"],
+                "spawnInterval": 2500,
+                "fallSpeed": "normal",
+                "bossThreshold": 10
+            },
+            {
+                "name": "ยาก",
+                "maxNumber": 50,
+                "operations": ["+", "-", "*"],
+                "spawnInterval": 2000,
+                "fallSpeed": "fast",
+                "bossThreshold": 10
+            }
+        ]
+    },
+    "gameplay": {
+        "startingLives": 3,
+        "pointsPerCorrect": 10,
+        "bonusComboMultiplier": 2,
+        "bossPointsMultiplier": 3,
+        "wrongAnswerPenalty": 1,
+        "maxQuestionsOnScreen": 5,
+        "bossSpawnInterval": 10
+    },
+    "audio": {
+        "bgmVolume": 0.5,
+        "sfxVolume": 0.7,
+        "sounds": {
+            "correct": "assets/audio/correct.mp3",
+            "wrong": "assets/audio/wrong.mp3",
+            "levelUp": "assets/audio/levelup.mp3",
+            "boss": "assets/audio/boss.mp3",
+            "gameOver": "assets/audio/gameover.mp3",
+            "click": "assets/audio/click.mp3"
+        }
+    },
+    "colors": {
+        "background": "#667eea",
+        "primary": "#FF6B6B",
+        "secondary": "#4ECDC4",
+        "accent": "#FFE66D",
+        "success": "#6BCB77",
+        "danger": "#FF6B6B",
+        "info": "#4D96FF"
+    }
+}

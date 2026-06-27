@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🎮 Math Kids Game - เกมคณิตศาสตร์สนุกๆ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Canvas สำหรับ Kaboom.js -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- หน้าเมนูหลัก -->
+    <div id="menuScreen" class="screen active">
+        <div class="menu-container">
+            <h1 class="game-title">🎮 เกมคณิตศาสตร์สนุกๆ</h1>
+            <p class="subtitle">เรียนเลข เล่นเกม กับตัวละครน่ารัก!</p>
+            
+            <div class="menu-buttons">
+                <button id="btnStart" class="btn btn-primary">🚀 เริ่มเล่น</button>
+                <button id="btnSettings" class="btn btn-secondary">⚙️ ตั้งค่า</button>
+            </div>
+
+            <div class="difficulty-selector">
+                <span>ระดับความยาก:</span>
+                <div class="diff-buttons">
+                    <button data-diff="1" class="btn btn-diff active">ง่าย</button>
+                    <button data-diff="2" class="btn btn-diff">ปานกลาง</button>
+                    <button data-diff="3" class="btn btn-diff">ยาก</button>
+                </div>
+            </div>
+
+            <div class="multiplayer-toggle">
+                <input type="checkbox" id="mpToggle">
+                <label for="mpToggle">👥 โหมดคู่ (Multiplayer)</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าเล่นเกม -->
+    <div id="gameScreen" class="screen">
+        <div id="hud" class="hud">
+            <div class="hud-left">
+                <span class="score-display">⭐ คะแนน: <span id="scoreValue">0</span></span>
+                <span class="level-display">📊 ด่าน: <span id="levelValue">1</span></span>
+            </div>
+            <div class="hud-center">
+                <span id="questionText" class="question-text">5 + 3 = ?</span>
+            </div>
+            <div class="hud-right">
+                <span class="lives-display">❤️ <span id="livesValue">3</span></span>
+                <span class="combo-display">🔥 Combo: <span id="comboValue">0</span>x</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้า Boss Battle -->
+    <div id="bossScreen" class="screen">
+        <div class="boss-banner">
+            <h2 class="boss-title">🐉 BOSS BATTLE! 🐉</h2>
+            <p class="boss-subtitle">พร้อมหรือยัง? ตอบให้เร็วที่สุด!</p>
+        </div>
+    </div>
+
+    <!-- หน้าตั้งค่า -->
+    <div id="settingsScreen" class="screen">
+        <div class="settings-container">
+            <h2>⚙️ ตั้งค่า</h2>
+            <div class="setting-row">
+                <label>🔊 เสียงเพลงพื้นหลัง</label>
+                <input type="range" id="bgmVolume" min="0" max="100" value="50">
+            </div>
+            <div class="setting-row">
+                <label>🔊 เสียงเอฟเฟกต์</label>
+                <input type="range" id="sfxVolume" min="0" max="100" value="70">
+            </div>
+            <div class="setting-row">
+                <label>💨 ความเร็วไอเทมตก</label>
+                <select id="itemSpeed">
+                    <option value="slow">ช้า</option>
+                    <option value="normal" selected>ปกติ</option>
+                    <option value="fast">เร็ว</option>
+                </select>
+            </div>
+            <button id="btnBackFromSettings" class="btn btn-primary">🔙 กลับ</button>
+        </div>
+    </div>
+
+    <!-- หน้า Game Over -->
+    <div id="gameOverScreen" class="screen">
+        <div class="gameover-container">
+            <h2 class="gameover-title">😢 จบเกมแล้ว!</h2>
+            <div class="final-score">
+                <p>คะแนนรวมของคุณ</p>
+                <span id="finalScore" class="big-number">0</span>
+            </div>
+            <div class="stats-row">
+                <span>✅ ตอบถูก: <span id="correctCount">0</span></span>
+                <span>❌ ผิด: <span id="wrongCount">0</span></span>
+                <span>🏆 สูงสุด: <span id="highScore">0</span></span>
+            </div>
+            <div class="gameover-buttons">
+                <button id="btnRestart" class="btn btn-primary">🔄 เล่นอีกครั้ง</button>
+                <button id="btnMenu" class="btn btn-secondary">🏠 เมนูหลัก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kaboom.js CDN -->
+    <script src="https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs" type="module"></script>
+
+    <!-- Game Modules -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
