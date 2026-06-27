@@ -1,62 +1,47 @@
 /**
- * QuestionEngine — Abstract Base Class
- * ทุกเกมต้อง extend คลาสนี้ เพื่อกำหนดกฎเฉพาะเกม
+ * QuestionEngine — Base Class
+ * ทุกเกมต้อง extend คลาสนี้
+ * Challenge shape มาตรฐาน: { text, answer, options }
  */
 
 import { generateOptions, getRandomInt } from '../utils/helpers.js';
 
-export abstract class QuestionEngine {
-    constructor(difficultyLevel = 1) {
-        this.difficultyLevel = difficultyLevel;
+export class QuestionEngine {
+    constructor(difficultyLevel) {
+        this.difficultyLevel = difficultyLevel || 1;
         this.type = 'abstract';
         this.currentChallenge = null;
         this.totalQuestionsAnswered = 0;
         this.correctAnswers = 0;
     }
 
-    /**
-     * Abstract method — เกมตางๆ ต้อง override
-     * สร้ง challenge (โจทย์ + ตัวเลือก) ใหม่
-     */
-    abstract getNextChallenge(): object;
+    /** ต้อง override ใน subclass — คืน { text, answer, options } */
+    getNextChallenge() {
+        throw new Error('getNextChallenge() must be implemented by subclass');
+    }
 
-    /**
-     * Abstract method — เกมตางๆ ต้อง override
-     * ตรวจสอบคำตอบ
-     */
-    abstract checkAnswer(selectedOption: string): boolean;
+    /** ต้อง override ใน subclass */
+    checkAnswer(selectedOption) {
+        throw new Error('checkAnswer() must be implemented by subclass');
+    }
 
-    /**
-     * สร้งโจทย์ใหม่อัตโนมัติตามความยาก
-     */
     generateQuestion() {
         this.currentChallenge = this.getNextChallenge();
         this.totalQuestionsAnswered++;
         return this.currentChallenge;
     }
 
-    /**
-     * ตรวจสอบคำตอบ และอัปเดตสถิต
-     */
     validateAnswer(selectedOption) {
         const isCorrect = this.checkAnswer(selectedOption);
-        if (isCorrect) {
-            this.correctAnswers++;
-        }
+        if (isCorrect) this.correctAnswers++;
         return isCorrect;
     }
 
-    /**
-     * สร้งตัวเลือกคำตอบ
-     */
-    createOptions(correctAnswer) {
-        const count = 5;
+    /** สร้างตัวเลือกคำตอบ (รวมคำตอบที่ถูก) */
+    createOptions(correctAnswer, count = 6) {
         return generateOptions(parseInt(correctAnswer), count, this._getOptionRange());
     }
 
-    /**
-     * ช่วงห่างของตัวเลขหลอก (ปรับตามความยาก)
-     */
     _getOptionRange() {
         switch (parseInt(this.difficultyLevel)) {
             case 1: return 5;
@@ -66,12 +51,8 @@ export abstract class QuestionEngine {
         }
     }
 
-    /**
-     * สุ่มตัวเลขวั่ว
-     */
     getRandomNumber() {
-        const maxNum = this._getMaxNumber();
-        return getRandomInt(1, maxNum);
+        return getRandomInt(1, this._getMaxNumber());
     }
 
     _getMaxNumber() {
@@ -83,25 +64,16 @@ export abstract class QuestionEngine {
         }
     }
 
-    /**
-     * อัปเดตความยาก
-     */
     setDifficulty(level) {
         this.difficultyLevel = level;
     }
 
-    /**
-     * รีเซ็ตสถิต
-     */
     resetStats() {
         this.totalQuestionsAnswered = 0;
         this.correctAnswers = 0;
         this.currentChallenge = null;
     }
 
-    /**
-     * สถิต
-     */
     getAccuracy() {
         if (this.totalQuestionsAnswered === 0) return 0;
         return Math.round((this.correctAnswers / this.totalQuestionsAnswered) * 100);

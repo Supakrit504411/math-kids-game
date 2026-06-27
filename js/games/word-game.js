@@ -1,12 +1,11 @@
 /**
- * WordGame — ระบบคำศัพท์ (เตรียมสำหรับอนาคต)
+ * WordGame — ระบบคำศัพท์
  * Extends QuestionEngine
- * 
- * ใช้งาน: แทนที่ wordBank ด้วย JSON จริง หรอดึงจาก API
+ * Challenge shape: { text, answer, options }
  */
 
 import { QuestionEngine } from '../engine/question-engine.js';
-import { splitWord, shuffleArray } from '../utils/helpers.js';
+import { shuffleArray } from '../utils/helpers.js';
 
 export class WordGame extends QuestionEngine {
     constructor(difficultyLevel = 1) {
@@ -15,71 +14,50 @@ export class WordGame extends QuestionEngine {
         this.wordBank = this._getDefaultWords();
     }
 
-    /**
-     * ศูนยคำศัพท์ (แทนที่จะโหลดจาก JSON/AI ในอนาคต)
-     */
     _getDefaultWords() {
         return [
-            { word: 'ดอกไม้', hint: '🌸 สิ่งสวยงามที่มีสีต่างๆ', syllables: ['ดอก', 'ไม้'] },
-            { word: 'แมว', hint: '🐱 สัตว์เลี้ยงตัวเล็ก miaow', syllables: ['แม้ว'] },
-            { word: 'โรงเรียน', hint: '🏫 ที่เรียนหนังสือ', syllables: ['เริ่ยน', 'สอน'] },
-            { word: 'หนังสือ', hint: '📖 มีหน้ากระดาษอ่านได้', syllables: ['หนั่ง', 'นัง'] },
-            { word: 'ผลไม้', hint: '🍎 กินอร่อย มีวิตามิน', syllables: ['ผล', 'ไม้'] },
+            { word: 'ดอกไม้', hint: 'สิ่งสวยงามที่มีสีต่างๆ' },
+            { word: 'แมว', hint: 'สัตว์เลี้ยงตัวเล็ก' },
+            { word: 'โรงเรียน', hint: 'ที่เรียนหนังสือ' },
+            { word: 'หนังสือ', hint: 'มีหน้ากระดาษอ่านได้' },
+            { word: 'ผลไม้', hint: 'กินอร่อย มีวิตามิน' },
         ];
     }
 
     getNextChallenge() {
         const entry = this.wordBank[Math.floor(Math.random() * this.wordBank.length)];
-        const correctWord = entry.word;
-        
-        // สรุ่่มผสมคำใหผิด
-        const shuffled = this._shuffleSyllables(entry.syllables);
-        const options = this._generateWordOptions(shuffled, correctWord);
+        const correct = entry.word;
+        const options = this._generateWordOptions(correct);
 
         return {
-            question: 'สะกดคำวา?',
-            hint: entry.hint,
-            correctAnswer: correctWord,
-            options: options
+            text: `คำใดถูกต้อง?\nคำใบ้: ${entry.hint}`,
+            answer: correct,
+            options,
         };
     }
 
     checkAnswer(selectedOption) {
-        return selectedOption === this.currentChallenge.correctAnswer;
+        if (!this.currentChallenge) return false;
+        return selectedOption === this.currentChallenge.answer;
     }
 
-    /**
-     * สรุ่่มผสมพยางคใหผิด
-     */
-    _shuffleSyllables(syllables) {
-        let attempt;
-        do {
-            attempt = shuffleArray(syllables);
-        } while (attempt.join('') === syllables.join(''));
-        return attempt;
-    }
-
-    /**
-     * สร้งตวัเลือกคำ (ถูก + ผิด)
-     */
-    _generateWordOptions(shuffled, correct) {
+    _generateWordOptions(correct) {
         const options = new Set([correct]);
-        
-        // เพิ่มคำผิดจากการผสม
-        const mixed1 = shuffled.join('');
-        if (mixed1 !== correct) options.add(mixed1);
-
-        // สร้างคำผิดเพิ่มเติม
-        const extraChars = ['ะ', 'า', 'ิ', 'ี', 'ึ', 'ื', 'ุ', 'ู'];
-        for (let i = 0; i < 3; i++) {
-            let fake = correct;
-            if (fake.length > 2) {
-                const idx = Math.floor(Math.random() * (fake.length - 1)) + 1;
-                fake = fake.slice(0, idx) + extraChars[Math.floor(Math.random() * extraChars.length)] + fake.slice(idx);
-            }
-            if (fake !== correct) options.add(fake);
+        // สร้างคำหลอกโดยสลับตัวอักษร
+        const chars = correct.split('');
+        let safety = 0;
+        while (options.size < 5 && safety < 30) {
+            safety++;
+            const shuffled = shuffleArray(chars).join('');
+            if (shuffled !== correct) options.add(shuffled);
         }
-
-        return shuffleArray([...options].slice(0, 5));
+        // ถ้าสลับไม่ได้ผล ใช้คำอื่นใน bank
+        if (options.size < 5) {
+            for (const w of this.wordBank) {
+                if (w.word !== correct) options.add(w.word);
+                if (options.size >= 5) break;
+            }
+        }
+        return shuffleArray([...options]).slice(0, 5);
     }
 }

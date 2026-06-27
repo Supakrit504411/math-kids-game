@@ -1,7 +1,7 @@
 {
     "game": {
         "name": "Math Kids Game",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "language": "th"
     },
     "display": {
@@ -9,7 +9,8 @@
         "height": 720,
         "pixelArt": false,
         "scale": 1,
-        "fullscreen": false
+        "fullscreen": false,
+        "responsive": true
     },
     "difficulty": {
         "levels": [
@@ -48,9 +49,15 @@
         "maxQuestionsOnScreen": 5,
         "bossSpawnInterval": 10
     },
+    "controls": {
+        "pauseHotkey": ["p", "P", "Escape"],
+        "pointerEvents": true,
+        "touchSupport": true
+    },
     "audio": {
         "bgmVolume": 0.5,
         "sfxVolume": 0.7,
+        "defaultMuted": false,
         "sounds": {
             "correct": "assets/audio/correct.mp3",
             "wrong": "assets/audio/wrong.mp3",

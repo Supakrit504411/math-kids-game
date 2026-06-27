@@ -1,6 +1,7 @@
 /**
  * MathGame — ระบบโจทย์คณิตศาสตร์
  * Extends QuestionEngine
+ * Challenge shape: { text, answer, options }
  */
 
 import { QuestionEngine } from '../engine/question-engine.js';
@@ -11,57 +12,39 @@ export class MathGame extends QuestionEngine {
         this.type = 'math';
     }
 
-    /**
-     * สร้างโจทย์ใหม่
-     */
     getNextChallenge() {
-        const num1 = this.getRandomNumber();
-        const num2 = this.getRandomNumber();
-        
-        let answer, symbol;
+        let num1 = this.getRandomNumber();
+        let num2 = this.getRandomNumber();
         const ops = this._getOperations();
+        const op = ops[Math.floor(Math.random() * ops.length)];
 
-        const opIndex = Math.floor(Math.random() * ops.length);
-        const operation = ops[opIndex];
-
-        switch (operation) {
+        let answer;
+        switch (op) {
             case '+':
                 answer = num1 + num2;
-                symbol = '+';
                 break;
             case '-':
-                if (num1 < num2) [num1, num2] = [num2, num1];
+                if (num1 < num2) { const t = num1; num1 = num2; num2 = t; }
                 answer = num1 - num2;
-                symbol = '-';
                 break;
             case '*':
                 answer = num1 * num2;
-                symbol = '×';
                 break;
             default:
                 answer = num1 + num2;
-                symbol = '+';
         }
 
-        const options = this.createOptions(answer);
+        const text = `${num1} ${op} ${num2} = ?`;
+        const options = this.createOptions(answer, 6);
 
-        return {
-            question: `${num1} ${symbol} ${num2} = ?`,
-            correctAnswer: answer.toString(),
-            options: options
-        };
+        return { text, answer, options };
     }
 
-    /**
-     * ตรวจสอบคำตอบ
-     */
     checkAnswer(selectedOption) {
-        return selectedOption === this.currentChallenge.correctAnswer;
+        if (!this.currentChallenge) return false;
+        return parseInt(selectedOption) === parseInt(this.currentChallenge.answer);
     }
 
-    /**
-     * ได้การดำเนินการตามความยาก
-     */
     _getOperations() {
         switch (parseInt(this.difficultyLevel)) {
             case 1: return ['+'];

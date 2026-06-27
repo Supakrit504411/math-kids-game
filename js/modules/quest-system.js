@@ -1,137 +1,88 @@
 /**
- * Quest/Boss System Module
- * จดัการระบบบอส: Speed Rush และ Multi-Target
+ * QuestSystem — ระบบความสำเร็จ/ภารกิจ (Achievements)
+ * ติดตามความคืบหน้าของผู้เล่นและปลดล็อกเหรียญ
+ *
+ * หมายเหตุ: ระบบ Boss level จัดการอยู่ใน GameEngine โดยตรง
+ * คลาสนี้มีหน้าที่แค่ tracking + แจ้งเตือนเมื่อปลดล็อก achievement
  */
 
-import { getRandomInt } from '../utils/helpers.js';
+const ACH_KEY = 'mathKidsAchievements';
 
 export class QuestSystem {
-    constructor(uiManager, gameEngine) {
-        this.uiManager = uiManager;
-        this.gameEngine = gameEngine;
-        this.isBossActive = false;
-        this.bossType = null;
-        this.questionsSinceLastBoss = 0;
-        this.bossThreshold = 10;
-        this.bossTimer = null;
-        this.bossDuration = 30;
+    constructor() {
+        this.achievements = [
+            { id: 'firstCorrect', name: 'เริ่มต้นดี!', desc: 'ตอบถูกครั้งแรก', unlocked: false },
+            { id: 'combo5', name: 'มือฉมัง', desc: 'ทำ Combo 5 ติดต่อกัน', unlocked: false },
+            { id: 'combo10', name: 'เซียนคณิต', desc: 'ทำ Combo 10 ติดต่อกัน', unlocked: false },
+            { id: 'score100', name: 'ร้อยคะแนน', desc: 'ทำคะแนนถึง 100', unlocked: false },
+            { id: 'score500', name: 'ห้าร้อยคะแนน', desc: 'ทำคะแนนถึง 500', unlocked: false },
+            { id: 'bossBeaten', name: 'ปราบบอส', desc: 'ผ่าน Boss Level สำเร็จ', unlocked: false },
+            { id: 'level5', name: 'เลเวล 5', desc: 'เลื่อนเลเวลถึง 5', unlocked: false },
+            { id: 'noMistake', name: 'ไร้ที่ติ', desc: 'ตอบถูก 10 ข้อติด', unlocked: false },
+        ];
+        this._load();
+        this.pendingNotifications = [];
     }
 
-    /**
-     * ตรวจสอบว่าต้องเริ่่มบอสหรอ
-     */
-    checkBossTrigger(totalAnswered) {
-        if (!this.isBossActive && totalAnswered > 0 && totalAnswered % this.bossThreshold === 0) {
-            this.startBossBattle();
-            return true;
+    /** อัปเดตสถานะจาก UIManager — เรียกหลัง onCorrect/onWrong */
+    update(uiManager, event) {
+        const newlyUnlocked = [];
+        const check = (id, cond) => {
+            const a = this.achievements.find(x => x.id === id);
+            if (a && !a.unlocked && cond) {
+                a.unlocked = true;
+                newlyUnlocked.push(a);
+            }
+        };
+
+        check('firstCorrect', uiManager.getCorrectCount() >= 1);
+        check('combo5', uiManager.getCombo() >= 5);
+        check('combo10', uiManager.getCombo() >= 10);
+        check('score100', uiManager.getScore() >= 100);
+        check('score500', uiManager.getScore() >= 500);
+        check('level5', uiManager.getLevel() >= 5);
+        check('noMistake', uiManager.getCorrectCount() >= 10 && uiManager.getWrongCount() === 0);
+        if (event === 'bossCleared') check('bossBeaten', true);
+
+        if (newlyUnlocked.length > 0) {
+            this._save();
+            this.pendingNotifications.push(...newlyUnlocked);
         }
-        return false;
+        return newlyUnlocked;
     }
 
-    /**
-     * เริ่่ม Boss Battle
-     */
-    startBossBattle() {
-        this.isBossActive = true;
-        this.bossType = this._randomBossType();
-        
-        // แสดงหน้า Boss
-        this._showBossBanner();
-
-        console.log(`🐉 BOSS BATTLE! Type: ${this.bossType}`);
-
-        // ตั้งเวลาบอส
-        this.bossTimer = setTimeout(() => {
-            this.endBossBattle();
-        }, this.bossDuration * 1000);
+    /** ดึงการแจ้งเตือนที่ค้างอยู่ (เรียกจาก game loop เพื่อแสดง) */
+    popNotification() {
+        return this.pendingNotifications.shift() || null;
     }
 
-    /**
-     * สรุ่่มประเภทบอส
-     */
-    _randomBossType() {
-        const types = ['speed-rush', 'multi-target'];
-        return types[getRandomInt(0, types.length - 1)];
+    getUnlocked() {
+        return this.achievements.filter(a => a.unlocked);
     }
 
-    /**
-     * แสดงแบนเนอร์บอส
-     */
-    _showBossBanner() {
-        const menuScreen = document.getElementById('menuScreen');
-        const bossScreen = document.getElementById('bossScreen');
-        
-        if (menuScreen) menuScreen.classList.remove('active');
-        if (bossScreen) bossScreen.classList.add('active');
-
-        // ซ่อนหลัง 2 วินาที
-        setTimeout(() => {
-            if (bossScreen) bossScreen.classList.remove('active');
-        }, 2000);
+    getAll() {
+        return this.achievements;
     }
 
-    /**
-     * สิ้นสุดบอส
-     */
-    endBossBattle() {
-        this.isBossActive = false;
-        this.bossType = null;
-        
-        if (this.bossTimer) {
-            clearTimeout(this.bossTimer);
-            this.bossTimer = null;
-        }
-
-        console.log('✅ Boss battle ended!');
+    _load() {
+        try {
+            const raw = localStorage.getItem(ACH_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (Array.isArray(saved)) {
+                saved.forEach(s => {
+                    const a = this.achievements.find(x => x.id === s.id);
+                    if (a) a.unlocked = !!s.unlocked;
+                });
+            }
+        } catch (e) { }
     }
 
-    /**
-     * ได้ความเร็วบอส (วินาทีก่อนตก)
-     */
-    getSpawnInterval(baseInterval) {
-        if (!this.isBossActive) return baseInterval;
-
-        switch (this.bossType) {
-            case 'speed-rush':
-                return Math.min(baseInterval / 3, 1000); // เร็วกว่า 3 เท่า
-            case 'multi-target':
-                return baseInterval; // ปกติ แต่มีหลายโจทย์
-            default:
-                return baseInterval;
-        }
-    }
-
-    /**
-     * จำนวนโจทย์ที่ควรปรากฏบนหน้าจอ
-     */
-    getMaxQuestionsOnScreen() {
-        if (!this.isBossActive) return 5;
-        
-        switch (this.bossType) {
-            case 'multi-target':
-                return 8; // หลายโจทย์พรอมกน
-            default:
-                return 5;
-        }
-    }
-
-    /**
-     * คะแนนคูณบอส
-     */
-    getPointsMultiplier() {
-        return this.isBossActive ? 3 : 1;
-    }
-
-    /**
-     * รีเซ็ต
-     */
-    reset() {
-        this.isBossActive = false;
-        this.bossType = null;
-        this.questionsSinceLastBoss = 0;
-        if (this.bossTimer) {
-            clearTimeout(this.bossTimer);
-            this.bossTimer = null;
-        }
+    _save() {
+        try {
+            localStorage.setItem(ACH_KEY, JSON.stringify(
+                this.achievements.map(a => ({ id: a.id, unlocked: a.unlocked }))
+            ));
+        } catch (e) { }
     }
 }

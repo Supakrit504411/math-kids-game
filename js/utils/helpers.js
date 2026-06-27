@@ -28,14 +28,14 @@ export function randomFrom(arr) {
  */
 export function generateOptions(correct, count = 5, range = 5) {
     const options = new Set();
-    options.add(correct.toString());
+    options.add(correct);
 
     while (options.size < count) {
         let wrong;
         const sign = Math.random() > 0.5 ? 1 : -1;
-        wrong = parseInt(correct) + (getRandomInt(1, range) * sign);
-        if (wrong !== parseInt(correct) && wrong >= 0) {
-            options.add(wrong.toString());
+        wrong = correct + (getRandomInt(1, range) * sign);
+        if (wrong !== correct && wrong >= 0) {
+            options.add(wrong);
         }
     }
 
