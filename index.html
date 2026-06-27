@@ -14,10 +14,12 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Canvas สำหรับ Kaboom.js -->
-    <canvas id="gameCanvas"></canvas>
-    <!-- ข้อความภาษาไทย (Kaboom canvas วัด glyph ไทยไม่ได้ → width 0) -->
-    <div id="game-ui-overlay" aria-hidden="true"></div>
+    <div id="game-container">
+        <!-- Canvas สำหรับ Kaboom.js (ต้องส่ง canvas นี้เข้า kaboom() — ไม่งั้น Kaboom สร้าง canvas ใหม่ที่ไม่มี CSS) -->
+        <canvas id="gameCanvas"></canvas>
+        <!-- ข้อความภาษาไทย (Kaboom canvas วัด glyph ไทยไม่ได้ → width 0) -->
+        <div id="game-ui-overlay" aria-hidden="true"></div>
+    </div>
 
     <!-- Game Modules (Kaboom.js โหลดใน main.js แล้ว) -->
     <script type="module" src="js/main.js"></script>

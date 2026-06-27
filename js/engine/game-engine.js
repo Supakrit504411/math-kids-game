@@ -97,6 +97,7 @@ export class GameEngine {
         this.pauseOverlayObjs = [];
         this.clickableAreas = [];
         this.config = null;
+        this.canvas = null;
         this.clickHandlerBound = this._onCanvasPointer.bind(this);
         this.keyHandlerBound = this._onKeyDown.bind(this);
         this._showingAnswer = false;
@@ -112,12 +113,13 @@ export class GameEngine {
         this._bgLoaded = true;
     }
 
-    initContext(k) {
+    initContext(k, canvasEl) {
         this.k = k;
+        this.canvas = canvasEl || document.getElementById('gameCanvas');
         setTimeout(() => {
-            const canvas = document.querySelector('canvas');
+            const canvas = this.canvas || document.querySelector('canvas');
             if (canvas) {
-                canvas.addEventListener('click', this.clickHandlerBound, { capture: true });
+                canvas.addEventListener('pointerdown', this.clickHandlerBound, { capture: true, passive: true });
                 canvas.style.touchAction = 'manipulation';
                 console.log('Canvas pointer handler attached');
             } else {
@@ -127,6 +129,29 @@ export class GameEngine {
         }, 200);
         this._setupScenes();
         console.log('GameEngine initialized');
+    }
+
+    /** เรียกเมื่อหมุนจอ / resize — วาด scene ปัจจุบันใหม่ให้ overlay ตรงตำแหน่ง */
+    onViewportResize() {
+        if (!this.k || !this._currentSceneName) return;
+        const scene = this._currentSceneName;
+        if (scene === 'game' && this.gameRunning) {
+            const diff = this.currentDifficulty;
+            const qCount = this.questionCount;
+            const wasPaused = this.uiManager.isPaused();
+            this.k.go('game');
+            this.currentDifficulty = diff;
+            this.questionCount = qCount;
+            if (wasPaused) this._togglePause();
+        } else {
+            this.k.go(scene);
+        }
+    }
+
+    _isMobileLayout() {
+        const W = this.k.width();
+        const H = this.k.height();
+        return W < 800 || H > W;
     }
 
     _addBackground() {
@@ -153,8 +178,9 @@ export class GameEngine {
     _onCanvasPointer(e) {
         // ปลดล็อกเสียงตอนมี user gesture แรก
         this.sound.unlock();
+        if (e.pointerType === 'touch') e.preventDefault();
 
-        const canvas = e.target;
+        const canvas = e.currentTarget || this.canvas || e.target;
         const rc = canvas.getBoundingClientRect();
         const gameW = this.k.width();
         const gameH = this.k.height();
@@ -321,28 +347,34 @@ export class GameEngine {
         this._clearAll();
         this.isBoss = false;
         const W = this.k.width();
+        const H = this.k.height();
+        const mobile = this._isMobileLayout();
         this._addBackground();
-        // overlay จางๆ บนภาพพื้นหลังเพื่อให้อ่านข้อความง่าย
-        this._addRect(0, 0, W, this.k.height(), [0, 0, 30, 120], 0);
+        this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
 
-        this._addText('MATH', W * 0.35, 130, 96, [255, 107, 107]);
-        this._addText('KIDS', W * 0.65, 130, 96, [78, 205, 196]);
-        this._addText('เกมเรียนคณิตศาสตร์สนุกๆ!', W / 2, 210, 30, [255, 255, 255]);
+        const titleSize = mobile ? 64 : 96;
+        const titleY = mobile ? 100 : 130;
+        this._addText('MATH', W * 0.35, titleY, titleSize, [255, 107, 107]);
+        this._addText('KIDS', W * 0.65, titleY, titleSize, [78, 205, 196]);
+        this._addText('เกมเรียนคณิตศาสตร์สนุกๆ!', W / 2, mobile ? 170 : 210, mobile ? 24 : 30, [255, 255, 255]);
 
-        const btnW = 280, btnH = 72;
+        const btnW = mobile ? Math.min(280, W - 48) : 280;
+        const btnH = mobile ? 64 : 72;
         const btnX = W / 2 - btnW / 2;
+        const startY = mobile ? 260 : 310;
 
-        this._addRect(btnX, 310, btnW, btnH, [255, 80, 80], 14);
-        this._addText('START GAME', W / 2, 310 + btnH / 2 + 2, 32, [255, 255, 255]);
-        this._addClickable(btnX, 310, btnW, btnH, () => {
+        this._addRect(btnX, startY, btnW, btnH, [255, 80, 80], 14);
+        this._addText('START GAME', W / 2, startY + btnH / 2 + 2, mobile ? 28 : 32, [255, 255, 255]);
+        this._addClickable(btnX, startY, btnW, btnH, () => {
             this.questionCount = 0;
             this.isBoss = false;
             this.k.go('game');
         });
 
-        this._addRect(btnX, 420, btnW, btnH, [100, 180, 255], 14);
-        this._addText('SETTINGS', W / 2, 420 + btnH / 2 + 2, 32, [255, 255, 255]);
-        this._addClickable(btnX, 420, btnW, btnH, () => this.k.go('settings'));
+        const settingsY = startY + btnH + (mobile ? 24 : 38);
+        this._addRect(btnX, settingsY, btnW, btnH, [100, 180, 255], 14);
+        this._addText('SETTINGS', W / 2, settingsY + btnH / 2 + 2, mobile ? 28 : 32, [255, 255, 255]);
+        this._addClickable(btnX, settingsY, btnW, btnH, () => this.k.go('settings'));
 
         // ปุ่ม Mute (เปิด/ปิดเสียง)
         const muteSize = 60;
@@ -356,7 +388,7 @@ export class GameEngine {
         });
 
         const hs = this.uiManager.getHighScore();
-        if (hs > 0) this._addText('High Score: ' + hs, W / 2, 560, 26, [255, 215, 0]);
+        if (hs > 0) this._addText('High Score: ' + hs, W / 2, settingsY + btnH + (mobile ? 40 : 70), mobile ? 22 : 26, [255, 215, 0]);
     }
 
     // ====== GAME SCENE ======
@@ -371,34 +403,40 @@ export class GameEngine {
 
         const W = this.k.width();
         const H = this.k.height();
+        const mobile = this._isMobileLayout();
         this._addBackground();
-        // overlay จางๆ บนภาพพื้นหลังเพื่อให้ falling items โดดเด่น
         this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
 
-        // สร้าง MathGame ตาม difficulty ปัจจุบัน
         this.mathGame = new MathGame(this.currentDifficulty);
 
-        this.scoreTextObj = this._addText('Score: 0', 160, 50, 26, [255, 255, 255]);
-        this.livesTextObj = this._addText('Lives: 3', W - 160, 50, 26, [255, 255, 255]);
-        this.comboTextObj = this._addText('', W / 2, 85, 22, [255, 215, 0]);
-        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - 20, 20, [255, 255, 255]);
+        const hudY = mobile ? 36 : 50;
+        const hudSize = mobile ? 20 : 26;
+        this.scoreTextObj = this._addText('Score: 0', mobile ? 90 : 160, hudY, hudSize, [255, 255, 255]);
+        this.livesTextObj = this._addText('Lives: 3', W - (mobile ? 90 : 160), hudY, hudSize, [255, 255, 255]);
+        this.comboTextObj = this._addText('', W / 2, mobile ? 68 : 85, mobile ? 18 : 22, [255, 215, 0]);
+        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - (mobile ? 28 : 20), mobile ? 18 : 20, [255, 255, 255]);
 
         // BACK button (ซ้ายบน)
-        this._addRect(10, 12, 70, 34, [80, 80, 120], 6);
-        this._addText('BACK', 45, 29, 17, [255, 255, 255]);
-        this._addClickable(10, 12, 70, 34, () => this.k.go('main-menu'));
+        const backW = mobile ? 64 : 70;
+        const backH = mobile ? 32 : 34;
+        this._addRect(8, 8, backW, backH, [80, 80, 120], 6);
+        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, mobile ? 14 : 17, [255, 255, 255]);
+        this._addClickable(8, 8, backW, backH, () => this.k.go('main-menu'));
 
-        // PAUSE button (ขวาบน ใต้ Lives)
-        const pauseX = W - 80, pauseY = 70;
-        this._addRect(pauseX, pauseY, 70, 34, [80, 80, 120], 6);
-        this._addText('PAUSE', pauseX + 35, pauseY + 17 + 2, 16, [255, 255, 255]);
-        this._addClickable(pauseX, pauseY, 70, 34, () => this._togglePause());
+        // PAUSE button (ขวาบน)
+        const pauseW = mobile ? 64 : 70;
+        const pauseH = mobile ? 32 : 34;
+        const pauseX = W - pauseW - 8;
+        const pauseY = mobile ? 48 : 70;
+        this._addRect(pauseX, pauseY, pauseW, pauseH, [80, 80, 120], 6);
+        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, mobile ? 14 : 16, [255, 255, 255]);
+        this._addClickable(pauseX, pauseY, pauseW, pauseH, () => this._togglePause());
 
-        // Mute button (ซ้ายบน ใต้ BACK)
-        const muteBtnY = 55;
-        this._addRect(10, muteBtnY, 70, 34, [60, 60, 90], 6);
-        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 45, muteBtnY + 17 + 2, 14, [255, 255, 255]);
-        this._addClickable(10, muteBtnY, 70, 34, () => {
+        // Mute button
+        const muteBtnY = mobile ? 44 : 55;
+        this._addRect(8, muteBtnY, backW, backH, [60, 60, 90], 6);
+        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, mobile ? 12 : 14, [255, 255, 255]);
+        this._addClickable(8, muteBtnY, backW, backH, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
             this.k.go('game');
@@ -444,27 +482,34 @@ export class GameEngine {
     }
 
     _drawGameSceneNoTutorial() {
-        // วาด scene ใหม่โดยไม่แสดง tutorial (เนื่องจาก _clearAll ล้างหมดแล้ว)
         const W = this.k.width();
         const H = this.k.height();
+        const mobile = this._isMobileLayout();
         this.gameRunning = true;
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
-        this.scoreTextObj = this._addText('Score: 0', 160, 50, 26, [255, 255, 255]);
-        this.livesTextObj = this._addText('Lives: 3', W - 160, 50, 26, [255, 255, 255]);
-        this.comboTextObj = this._addText('', W / 2, 85, 22, [255, 215, 0]);
-        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - 20, 20, [255, 255, 255]);
-        this._addRect(10, 12, 70, 34, [80, 80, 120], 6);
-        this._addText('BACK', 45, 29, 17, [255, 255, 255]);
-        this._addClickable(10, 12, 70, 34, () => this.k.go('main-menu'));
-        const pauseX = W - 80, pauseY = 70;
-        this._addRect(pauseX, pauseY, 70, 34, [80, 80, 120], 6);
-        this._addText('PAUSE', pauseX + 35, pauseY + 17 + 2, 16, [255, 255, 255]);
-        this._addClickable(pauseX, pauseY, 70, 34, () => this._togglePause());
-        const muteBtnY = 55;
-        this._addRect(10, muteBtnY, 70, 34, [60, 60, 90], 6);
-        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 45, muteBtnY + 17 + 2, 14, [255, 255, 255]);
-        this._addClickable(10, muteBtnY, 70, 34, () => {
+        const hudY = mobile ? 36 : 50;
+        const hudSize = mobile ? 20 : 26;
+        this.scoreTextObj = this._addText('Score: 0', mobile ? 90 : 160, hudY, hudSize, [255, 255, 255]);
+        this.livesTextObj = this._addText('Lives: 3', W - (mobile ? 90 : 160), hudY, hudSize, [255, 255, 255]);
+        this.comboTextObj = this._addText('', W / 2, mobile ? 68 : 85, mobile ? 18 : 22, [255, 215, 0]);
+        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - (mobile ? 28 : 20), mobile ? 18 : 20, [255, 255, 255]);
+        const backW = mobile ? 64 : 70;
+        const backH = mobile ? 32 : 34;
+        this._addRect(8, 8, backW, backH, [80, 80, 120], 6);
+        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, mobile ? 14 : 17, [255, 255, 255]);
+        this._addClickable(8, 8, backW, backH, () => this.k.go('main-menu'));
+        const pauseW = mobile ? 64 : 70;
+        const pauseH = mobile ? 32 : 34;
+        const pauseX = W - pauseW - 8;
+        const pauseY = mobile ? 48 : 70;
+        this._addRect(pauseX, pauseY, pauseW, pauseH, [80, 80, 120], 6);
+        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, mobile ? 14 : 16, [255, 255, 255]);
+        this._addClickable(pauseX, pauseY, pauseW, pauseH, () => this._togglePause());
+        const muteBtnY = mobile ? 44 : 55;
+        this._addRect(8, muteBtnY, backW, backH, [60, 60, 90], 6);
+        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, mobile ? 12 : 14, [255, 255, 255]);
+        this._addClickable(8, muteBtnY, backW, backH, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
             this.k.go('game');
@@ -574,7 +619,13 @@ export class GameEngine {
         if (this.questionTextObj && this.questionTextObj.destroy) {
             try { this.questionTextObj.destroy(); } catch (e) { }
         }
-        this.questionTextObj = this._addText(this.currentQuestion, this.k.width() / 2, 130, 52, [255, 255, 255]);
+        this.questionTextObj = this._addText(
+            this.currentQuestion,
+            this.k.width() / 2,
+            this._isMobileLayout() ? 110 : 130,
+            this._isMobileLayout() ? 40 : 52,
+            [255, 255, 255]
+        );
         this.sound.speak(this.currentQuestion.replace('?', ''));
 
         // challenge.options มาจาก MathGame.createOptions แล้ว
@@ -602,10 +653,10 @@ export class GameEngine {
     _spawnFallingItems(options, correctAnswer, side) {
         const W = this.k.width();
         // ขนาดปรับตามหน้าจอ (responsive)
-        const isSmall = W < 700;
-        const itemWidth = isSmall ? 80 : 110;
-        const itemHeight = isSmall ? 50 : 60;
-        const gap = isSmall ? 12 : 25;
+        const isSmall = W < 800 || this._isMobileLayout();
+        const itemWidth = isSmall ? Math.min(72, (W - 48) / 6 - 8) : 110;
+        const itemHeight = isSmall ? 48 : 60;
+        const gap = isSmall ? 8 : 25;
 
         let spawnAreaX, spawnAreaW;
         if (side !== undefined) {
