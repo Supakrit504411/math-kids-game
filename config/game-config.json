@@ -80,8 +80,8 @@
         "enabled": true,
         "maxEntries": 50,
         "_comment_supabase": "ใส่ supabaseUrl + supabaseAnonKey จาก Supabase Project Settings → API หลังจาก run supabase-migration.sql",
-        "supabaseUrl": "",
-        "supabaseAnonKey": "",
+        "supabaseUrl": "https://guuptptuurcxfoodaevc.supabase.co",
+        "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1dXB0cHV0dXJjeGZvZ2RhdWV2YyIsInJpZCI6ImNjNjg2NzQzLTZjZmItNDQ2YS1iNjY3LWRiYzM2Y2I3MjRlZiIsImlhdCI6MTczNTE5NjY4NCwiZXhwIjoyMDQ3Nzc0Njg0fQ.v75c809fUQnO0hIYK-v2RqN2-ZrV3wGxZU79E_7j7Q",
         "table": "leaderboard"
     }
 }
