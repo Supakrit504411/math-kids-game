@@ -1,12 +1,26 @@
 /**
- * Viewport — มือถือใช้ขนาดคงที่ 720×1280 แล้ว scale ด้วย CSS (เชื่อถือได้กว่า Kaboom stretch)
+ * Viewport — จัดการ responsive display แบบ 3 tiers (phone / tablet / desktop)
+ * - Phone: scale to fill screen พร้อมแถบว่างถ้า aspect ratio ไม่ตรง
+ * - Tablet: scale + letterbox ถ้าจำเป็น
+ * - Desktop: native canvas size
  */
 
 export const MOBILE_W = 720;
 export const MOBILE_H = 1280;
+export const DESKTOP_W = 1280;
+export const DESKTOP_H = 720;
 
-export function isMobileDevice() {
-    return window.innerWidth <= 900 || ('ontouchstart' in window && window.innerWidth <= 1024);
+/** @returns {'phone'|'tablet'|'desktop'} */
+export function getDeviceTier() {
+    const w = window.innerWidth;
+    const tabletMax = 1200;
+
+    // Phone: narrow screens
+    if (w < 768) return 'phone';
+    // Desktop: wide non-touch screens
+    if (w >= tabletMax && !('ontouchstart' in window)) return 'desktop';
+    // Tablet: medium-width or touch-enabled wide screens
+    return 'tablet';
 }
 
 export function isPortrait() {
@@ -18,29 +32,67 @@ export function isVirtualKeyboardOpen() {
     return window.visualViewport.height < window.innerHeight * 0.78;
 }
 
-/** @returns {{ width, height, scaleMode, cssBg }} */
+/**
+ * @returns {{
+ *   width: number,
+ *   height: number,
+ *   scaleMode: boolean,
+ *   cssBg: boolean,
+ *   tier: 'phone'|'tablet'|'desktop'
+ * }}
+ */
 export function getGameDimensions(config) {
+    const tier = getDeviceTier();
     const portrait = isPortrait();
-    const mobile = isMobileDevice();
+    const cfgW = config?.display?.width || DESKTOP_W;
+    const cfgH = config?.display?.height || DESKTOP_H;
 
-    if (mobile || portrait) {
+    if (tier === 'phone') {
+        // Phone: always portrait layout 720x1280
         return {
             width: MOBILE_W,
             height: MOBILE_H,
             scaleMode: true,
             cssBg: portrait,
+            tier,
         };
     }
 
+    if (tier === 'tablet') {
+        // Tablet: use orientation-aware canvas size
+        if (portrait) {
+            return {
+                width: MOBILE_W,
+                height: MOBILE_H,
+                scaleMode: true,
+                cssBg: true,
+                tier,
+            };
+        }
+        return {
+            width: cfgW,
+            height: cfgH,
+            scaleMode: true,
+            cssBg: false,
+            tier,
+        };
+    }
+
+    // Desktop: native size, no scale
     return {
-        width: config?.display?.width || 1280,
-        height: config?.display?.height || 720,
+        width: cfgW,
+        height: cfgH,
         scaleMode: false,
         cssBg: false,
+        tier,
     };
 }
 
-/** จัด wrapper + scale ให้เต็มจอ */
+/**
+ * จัด wrapper + scale ให้พอดีกับ viewport
+ * - Phone/Tablet: scale to fit พร้อม maintain aspect ratio (contain)
+ * - Desktop: no transform
+ */
 export function applyDisplayLayout(dims) {
     const container = document.getElementById('game-container');
     const wrapper = document.getElementById('game-scale');
@@ -48,15 +100,17 @@ export function applyDisplayLayout(dims) {
     if (!container || !wrapper) return;
 
     if (dims.scaleMode) {
-        const scale = Math.min(
-            window.innerWidth / dims.width,
-            window.innerHeight / dims.height
-        );
+        const scaleX = window.innerWidth / dims.width;
+        const scaleY = window.innerHeight / dims.height;
+        // Use contain (fit-inside) so nothing gets cut off
+        const scale = Math.min(scaleX, scaleY);
+
         wrapper.style.width = `${dims.width}px`;
         wrapper.style.height = `${dims.height}px`;
         wrapper.style.transform = `scale(${scale})`;
         container.classList.add('use-scale');
-        container.classList.toggle('mobile-portrait-bg', !!dims.cssBg);
+        container.classList.toggle('mobile-portrait-bg', !!(dims.cssBg && dims.tier === 'phone'));
+
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';
@@ -69,6 +123,7 @@ export function applyDisplayLayout(dims) {
         wrapper.style.height = '100%';
         wrapper.style.transform = 'none';
         container.classList.remove('use-scale', 'mobile-portrait-bg');
+
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';

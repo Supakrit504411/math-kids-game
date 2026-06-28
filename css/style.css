@@ -259,3 +259,54 @@ html, body {
         display: none;
     }
 }
+
+/* Tablet — ขนาดกลาง (iPad, Galaxy Tab etc.) */
+@media (min-width: 768px) and (max-width: 1200px) {
+    html, body {
+        font-size: 16px;
+    }
+
+    .dom-panel {
+        width: min(78vw, 600px);
+        padding: 24px 20px;
+        border-radius: 18px;
+    }
+
+    .dom-panel h2 {
+        font-size: clamp(24px, 4vw, 34px);
+    }
+
+    .dom-panel p.hint {
+        font-size: clamp(15px, 2.8vw, 19px);
+    }
+
+    .dom-input {
+        font-size: 19px;
+        padding: 16px 18px;
+    }
+
+    .dom-btn {
+        font-size: 17px;
+        padding: 14px 20px;
+    }
+
+    .leaderboard-scroll {
+        max-height: min(50dvh, 500px);
+    }
+
+    .leaderboard-table {
+        font-size: clamp(13px, 2.5vw, 16px);
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+        padding: 12px 8px;
+    }
+}
+
+/* Large tablets / small desktops in landscape */
+@media (min-width: 1025px) and (max-width: 1200px) {
+    .dom-panel {
+        width: min(60vw, 640px);
+    }
+}

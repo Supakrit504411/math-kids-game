@@ -10,6 +10,7 @@ export class LeaderboardService {
     constructor(config) {
         this.config = config?.leaderboard || {};
         this.maxEntries = this.config.maxEntries || MAX_LOCAL;
+        this._cloudAvailable = null; // null=unknown, true/false
     }
 
     _loadLocal() {
@@ -37,6 +38,32 @@ export class LeaderboardService {
         });
     }
 
+    /**
+     * Test การเชื่อมต่อกับ Supabase — มีประโยชน์สำหรับ debug
+     * @returns {Promise<{ ok: boolean, error?: string }>}
+     */
+    async healthCheck() {
+        if (!this.config.supabaseUrl || !this.config.supabaseAnonKey) {
+            return { ok: false, error: 'No Supabase config' };
+        }
+        try {
+            const table = this.config.table || 'leaderboard';
+            const url = `${this.config.supabaseUrl}/rest/v1/${table}?select=id&limit=1`;
+            const res = await fetch(url, {
+                headers: {
+                    apikey: this.config.supabaseAnonKey,
+                    Authorization: `Bearer ${this.config.supabaseAnonKey}`,
+                },
+            });
+            if (!res.ok) {
+                return { ok: false, error: `HTTP ${res.status}: ${res.statusText}` };
+            }
+            return { ok: true };
+        } catch (e) {
+            return { ok: false, error: e.message };
+        }
+    }
+
     /** @param {{ playerName, score, difficulty, difficultyName, maxLevel }} entry */
     async submit(entry) {
         const record = {
@@ -55,8 +82,11 @@ export class LeaderboardService {
         if (this.config.supabaseUrl && this.config.supabaseAnonKey) {
             try {
                 await this._submitCloud(record);
+                console.log('[Leaderboard] Cloud submit OK:', record.playerName, record.score);
+                this._cloudAvailable = true;
             } catch (e) {
-                console.warn('Cloud leaderboard sync failed:', e);
+                console.warn('[Leaderboard] Cloud submit failed (local only saved):', e.message);
+                this._cloudAvailable = false;
             }
         }
 
@@ -65,7 +95,7 @@ export class LeaderboardService {
 
     async _submitCloud(record) {
         const url = `${this.config.supabaseUrl}/rest/v1/${this.config.table || 'leaderboard'}`;
-        await fetch(url, {
+        const res = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -75,6 +105,10 @@ export class LeaderboardService {
             },
             body: JSON.stringify(record),
         });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
     }
 
     async fetchEntries() {
@@ -83,9 +117,12 @@ export class LeaderboardService {
         if (this.config.supabaseUrl && this.config.supabaseAnonKey) {
             try {
                 const cloud = await this._fetchCloud();
+                console.log(`[Leaderboard] Cloud fetch OK: ${cloud.length} entries`);
                 entries = this._merge(entries, cloud);
+                this._cloudAvailable = true;
             } catch (e) {
-                console.warn('Cloud leaderboard fetch failed:', e);
+                console.warn('[Leaderboard] Cloud fetch failed (using local only):', e.message);
+                this._cloudAvailable = false;
             }
         }
 
@@ -101,8 +138,9 @@ export class LeaderboardService {
                 Authorization: `Bearer ${this.config.supabaseAnonKey}`,
             },
         });
-        if (!res.ok) throw new Error('fetch failed');
-        return await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
     }
 
     _merge(a, b) {
@@ -121,5 +159,9 @@ export class LeaderboardService {
         const levels = config?.difficulty?.levels;
         if (levels && levels[level - 1]) return levels[level - 1].name;
         return ['ง่าย', 'ปานกลาง', 'ยาก'][level - 1] || 'ง่าย';
+    }
+
+    isCloudAvailable() {
+        return this._cloudAvailable === true;
     }
 }

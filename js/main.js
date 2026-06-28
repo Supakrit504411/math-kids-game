@@ -9,6 +9,7 @@ import {
     applyDisplayLayout,
     isVirtualKeyboardOpen,
     isPortrait,
+    getDeviceTier,
 } from './utils/viewport.js';
 
 async function init() {
@@ -19,6 +20,7 @@ async function init() {
     const canvas = document.getElementById('gameCanvas');
     const scaleRoot = document.getElementById('game-scale');
     const dims = getGameDimensions(config);
+    const deviceTier = dims.tier;
 
     applyDisplayLayout(dims);
 
@@ -30,7 +32,8 @@ async function init() {
         stretch: !dims.scaleMode,
         letterbox: false,
         crisp: false,
-        pixelDensity: dims.scaleMode ? 1 : Math.min(window.devicePixelRatio || 1, 2),
+        pixelDensity: dims.scaleMode ? Math.min(window.devicePixelRatio || 1, 2) :
+            Math.min(window.devicePixelRatio || 1, deviceTier === 'tablet' ? 2 : 1),
         background: dims.cssBg ? [0, 0, 0, 0] : [102, 126, 234],
         globals: true,
         font: 'kanit',
@@ -51,6 +54,7 @@ async function init() {
     const gameEngine = new GameEngine();
     gameEngine.setConfig(config);
     gameEngine.setDisplayMode(dims);
+    gameEngine.setDeviceTier(deviceTier);
     gameEngine.sound.enabled = !gameEngine.uiManager.isMuted();
     gameEngine.markAssetsReady();
     window.gameEngine = gameEngine;
@@ -60,8 +64,10 @@ async function init() {
 
     const refreshLayout = (redrawScene = false) => {
         const nextDims = getGameDimensions(config);
+        const nextTier = nextDims.tier;
         applyDisplayLayout(nextDims);
         gameEngine.setDisplayMode(nextDims);
+        gameEngine.setDeviceTier(nextTier);
 
         const nowPortrait = isPortrait();
         const orientationChanged = nowPortrait !== wasPortrait;
@@ -83,7 +89,7 @@ async function init() {
     });
     window.addEventListener('resize', () => applyDisplayLayout(getGameDimensions(config)));
 
-    console.log('Math Kids Game Ready!', `${dims.width}x${dims.height}`, dims.scaleMode ? 'scale-mode' : 'stretch');
+    console.log('Math Kids Game Ready!', `${dims.width}x${dims.height}`, dims.scaleMode ? `${deviceTier}-scale` : 'native');
 }
 
 function waitKaboomLoad(k) {
