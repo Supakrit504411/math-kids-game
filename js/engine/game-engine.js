@@ -408,6 +408,9 @@ export class GameEngine {
         if (!document.querySelector('.dom-panel .dom-input:focus')) {
             this._blockViewportRefresh = false;
         }
+        // Re-hide overlay from screen readers when no panels are visible
+        const overlay = document.getElementById('game-ui-overlay');
+        if (overlay) overlay.setAttribute('aria-hidden', 'true');
     }
 
     _getDomOverlay() {
@@ -426,6 +429,7 @@ export class GameEngine {
         this._blockViewportRefresh = true;
 
         const overlay = this._getDomOverlay();
+        overlay.setAttribute('aria-hidden', 'false');
         const panel = document.createElement('div');
         panel.className = 'dom-panel dom-panel--name';
         panel.innerHTML = `
@@ -484,6 +488,7 @@ export class GameEngine {
             : [];
 
         const overlay = this._getDomOverlay();
+        overlay.setAttribute('aria-hidden', 'false');
         const panel = document.createElement('div');
         panel.className = 'dom-panel';
 
