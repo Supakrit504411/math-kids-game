@@ -8,22 +8,29 @@
 index.html
   └─ <script type="module" src="js/main.js">
          ├─ import { GameEngine } from './engine/game-engine.js'
+         ├─ import { getDeviceTier, getGameDimensions, applyDisplayLayout, isVirtualKeyboardOpen, isPortrait } from './utils/viewport.js'
          └─ kaboomModule = await import('https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs')
 
 js/main.js
   ├─ loadFont('kanit', 'assets/fonts/Kanit-Regular.ttf')
   ├─ loadSprite('bg', 'assets/bg.png')
+  ├─ loadSprite('bg-mobile', 'assets/bg-mobile.png')
   ├─ await waitKaboomLoad(k)
+  ├─ getGameDimensions(config) → applyDisplayLayout(dims)
   └─ window.gameEngine = new GameEngine()
        ├─ gameEngine.setConfig(config)
+       ├─ gameEngine.setDisplayMode(dims)
+       ├─ gameEngine.setDeviceTier(deviceTier)
        ├─ gameEngine.markAssetsReady()
-       └─ gameEngine.initContext(k)
+       └─ gameEngine.initContext(k, canvas)
 
 js/engine/game-engine.js
-  ├─ import { UIManager }    '../modules/ui-manager.js'
-  ├─ import { QuestSystem }  '../modules/quest-system.js'
-  ├─ import { MathGame }     '../games/math-game.js'
-  ├─ import { generateOptions } '../utils/helpers.js'
+  ├─ import { UIManager }            '../modules/ui-manager.js'
+  ├─ import { QuestSystem }          '../modules/quest-system.js'
+  ├─ import { MathGame }             '../games/math-game.js'
+  ├─ import { PlayerProfile }        '../modules/player-profile.js'
+  ├─ import { LeaderboardService }   '../modules/leaderboard-service.js'
+  ├─ import { generateOptions }      '../utils/helpers.js'
   └─ class SoundEngine (inside same file)
        ├─ Web Audio API (Oscillator, GainNode)
        └─ SpeechSynthesisUtterance (Thai voice)
@@ -34,50 +41,71 @@ js/games/math-game.js
 js/games/word-game.js
   └─ import { QuestionEngine } '../engine/question-engine.js'
 
+js/modules/leaderboard-service.js
+  └─ (standalone — Supabase REST + localStorage)
+
+js/modules/player-profile.js
+  └─ (standalone — localStorage)
+
+js/utils/viewport.js
+  └─ (standalone — DOM measurements + CSS transforms)
+
 js/engine/network.js  (placeholder — ไม่ได้ import โดย game-engine ตอนนี้)
 ```
 
 ## 1. Core Files
 
-### `js/main.js` — Entry Point (~75 บรรทัด)
+### `js/main.js` — Entry Point (~135 บรรทัด)
 ```javascript
 async function init() {
     const kaboomModule = await import('https://unpkg.com/kaboom@3000.0.1/dist/kaboom.mjs');
     const kaboom = kaboomModule.default;          // ← สำคัญ: .default
     const config = await loadConfig();             // ← fetch() ต้องใช้ local server
 
+    const dims = getGameDimensions(config);
+    applyDisplayLayout(dims);  // CSS scale for mobile
+
     const k = kaboom({
-        width: config.display?.width || 1280,
-        height: config.display?.height || 720,
-        stretch: true, crisp: false,
-        background: [102, 126, 234],
+        width: dims.width,
+        height: dims.height,
+        stretch: !dims.scaleMode,
+        background: dims.cssBg ? [0,0,0,0] : [102,126,234],
         globals: true,
         font: 'kanit',
     });
 
     k.loadFont('kanit', 'assets/fonts/Kanit-Regular.ttf');
     k.loadSprite('bg', 'assets/bg.png');
+    k.loadSprite('bg-mobile', 'assets/bg-mobile.png');
     await waitKaboomLoad(k);                        // รอ font + bg โหลดเสร็จ
 
     const gameEngine = new GameEngine();
     gameEngine.setConfig(config);
+    gameEngine.setDisplayMode(dims);
+    gameEngine.setDeviceTier(dims.tier);
     gameEngine.markAssetsReady();
-    gameEngine.initContext(k);
+    gameEngine.initContext(k, canvas);
+
+    // orientation/resize handlers
+    k.onResize(() => refreshLayout(true));
+    window.addEventListener('orientationchange', ...);
 }
 ```
 
-### `js/engine/game-engine.js` — Core Engine (~860 บรรทัด)
+### `js/engine/game-engine.js` — Core Engine (~1400 บรรทัด)
 คลาสเดียวที่ขับเคลื่อนทั้งเกม รวม `SoundEngine` class ภายในไฟล์
 
 #### หน้าที่หลัก
-1. **Scene Management** - 4 scenes (main-menu, game, settings, game-over)
+1. **Scene Management** - 6 scenes (enter-name, main-menu, leaderboard, game, settings, game-over)
 2. **Game Loop** - `_gameUpdate()` ทำงานทุกเฟรมผ่าน `k.onUpdate()`
-3. **Falling Items** - จัดการ gravity, collision, hit test
+3. **Falling Items** - จัดการ gravity, drift, wall bounce, collision, hit test
 4. **Click Handler** - DOM event → game coordinates (รองรับ pointer + touch)
-5. **Sound** - SFX + TTS
-6. **UI State** - pause, tutorial, mute (ผ่าน UIManager)
-7. **Quests** - แจ้งเตือนความสำเร็จ (ผ่าน QuestSystem)
-8. **Background** - `_addBackground()` ในทุก scene + overlay มืด
+5. **Leaderboard** - submit/fetch ผ่าน LeaderboardService (Supabase + localStorage)
+6. **Player Profile** - ชื่อเล่นผ่าน PlayerProfile (localStorage)
+7. **Sound** - SFX + TTS
+8. **UI State** - pause, tutorial, mute (ผ่าน UIManager)
+9. **Quests** - แจ้งเตือนความสำเร็จ (ผ่าน QuestSystem)
+10. **Responsive** - `_tierSize()` ปรับ UI ตาม phone/tablet/desktop
 
 #### Properties สำคัญ
 ```javascript
@@ -86,6 +114,8 @@ class GameEngine {
     this.uiManager            // UIManager (score, lives, combo, mute, tutorial)
     this.sound                // SoundEngine
     this.questSystem          // QuestSystem (achievements)
+    this.leaderboardService   // LeaderboardService (cloud + local)
+    this.playerProfile        // PlayerProfile (ชื่อเล่น)
     this.mathGame             // MathGame instance (สร้างใน startGame)
     this.gameRunning          // boolean - stop/update loop เมื่อ false
     this.currentDifficulty    // 1-3
@@ -99,6 +129,8 @@ class GameEngine {
     this.bossNotifyObj
     this.pauseOverlayObjs[]
     this._bgLoaded            // markAssetsReady() ตั้ง true
+    this._deviceTier          // 'phone'|'tablet'|'desktop'
+    this._displayMode         // { scaleMode, cssBg }
     this._showingAnswer       // กำลังแสดงคำตอบที่ถูก
 }
 ```
@@ -110,8 +142,19 @@ go('scene-name')
      └─ scene callback runs
         ├─ _clearAll()        // destroy objects จาก scene ก่อนหน้า (Kaboom + DOM)
         ├─ _clearClickables() // reset clickables
+        ├─ _destroyDomPanels() // remove DOM panels + reset aria-hidden
         ├─ สร้าง UI ใหม่ + bg
         └─ เริ่ม spawn question (ถ้าเป็น 'game')
+```
+
+#### Responsive 3 Tiers (`_tierSize`)
+```
+_getLayoutTier() → 'phone' | 'tablet' | 'desktop'
+
+_tierSize({ phone: 120, tablet: 90, desktop: 110 })
+  → คืนค่าตาม tier ปัจจุบัน
+
+ใช้ในทุกจุด: items, fonts, buttons, HUD, menu, tutorial, game-over
 ```
 
 #### DOM Click Flow
@@ -119,14 +162,15 @@ go('scene-name')
 canvas pointer event (จาก initContext)
   └─ _onCanvasPointer(e)
        ├─ คำนวณ clickX, clickY (game coordinates)
-       ├─ ถ้ากำลัง pause: ส่งไป pause overlay buttons
        ├─ วน fallingItems (หลังไปหน้า)
-       │    └─ hit test → item.actionFn()
+       │    └─ circle: hit test ด้วย distance from center
+       │    └─ rect: hit test ด้วย AABB
+       │    └─ hit → item.actionFn()
        └─ วน clickableAreas
             └─ hit test → area.action()
 ```
 
-**สำคัญ:** Falling items ใช้ **pos จริง** (จาก Kaboom object ที่ sync ทุกเฟรม) ไม่ใช่ตำแหน่งตอน spawn
+**สำคัญ:** Falling items ใช้ **pos จริง** (จาก Kaboom object ที่ sync ทุกเฟรม) circle sync ใช้ anchor center ส่วน rect ใช้ anchor topleft
 
 ### ระบบข้อความ: DOM Overlay (สำคัญ!)
 
@@ -139,15 +183,34 @@ Kaboom ไม่สามารถ render ข้อความไทยบน c
 | ASCII (`Score: 0`, `START`, `MUTE`) | Kaboom `text()` | `_addText()` → `k.add([k.text(...)])` |
 | ไทย + non-ASCII (`เกมเรียน...`, `ข้อที่`) | HTML `<div>` overlay | `_addText()` → `_addDomText()` |
 
-`_addText()` ตรวจ `non-ASCII` regex แล้วเลือกวิธีอัตโนมัติ DOM overlay อยู่ใน `#game-ui-overlay` (`z-index: 2`, `pointer-events: none`)
+`_addText()` ตรวจ `non-ASCII` regex + strip emoji แล้วเลือกวิธีอัตโนมัติ DOM overlay อยู่ใน `#game-ui-overlay` (`z-index: 2`, `pointer-events: none`)
 
-ตำแหน่ง DOM text คำนวณเป็น `%` ของ canvas เพื่อให้ responsive ตาม `stretch: true`:
+ตำแหน่ง DOM text คำนวณเป็น `%` ของ canvas เพื่อให้ responsive:
 ```javascript
 el.style.left = `${(x / W) * 100}%`;
 el.style.top  = `${(y / H) * 100}%`;
-el.style.fontSize = `${(size / H) * 100}vh`;
+el.style.fontSize = `${(fontSize / H) * 100}%`;
 el.style.transform = 'translate(-50%, -50%)';
 ```
+
+### `js/modules/leaderboard-service.js` — Leaderboard Cloud + Local
+- `submit(entry)` → บันทึกลง localStorage → ลอง sync Supabase → fallback ถ้าพัง
+- `fetchEntries()` → merge local + cloud entries
+- `isCloudAvailable()` → เช็คสถานะการเชื่อมต่อ
+- `getRank(score, maxLevel)` → หาอันดับ
+- `healthCheck()` → ทดสอบ Supabase API
+
+### `js/modules/player-profile.js` — Player Profile (localStorage)
+- `getName()`, `setName(name)`, `hasName()`
+- Validate: 2-16 ตัวอักษร, trim whitespace
+
+### `js/utils/viewport.js` — Responsive 3 Tiers
+- `getDeviceTier()` → `'phone'` (< 768px) | `'tablet'` (768-1200px) | `'desktop'` (> 1200px)
+- `getGameDimensions(config)` → `{ width, height, scaleMode, cssBg, tier }`
+- Phone: 720×1280 portrait + CSS scale to fit
+- Tablet: orientation-aware + CSS scale
+- Desktop: native 1280×720
+- `applyDisplayLayout(dims)` → CSS `transform: scale(...)` + centering
 
 ### `js/engine/question-engine.js` — Abstract Base
 ```javascript
@@ -221,14 +284,19 @@ lerp(start, end, t)
 for each falling item:
   1. เพิ่ม gravity: item.vy += 0.15
   2. เคลื่อนที่: item.y += item.vy
-  3. พื้นจอ: if (y+h >= floor):
+  3. Wall bounce: ถ้า x<0 หรือ x+w>W → สะท้อน vx
+  4. Horizontal drift: item.x += item.vx
+  5. Friction: item.vx *= 0.998
+  6. Floor: if (y+h >= floor):
        - กระดอน: vy = -vy * bounce (0.55)
        - ถ้าน้อยมาก: destroy
-  4. SYNC POS ทุกเฟรม:
-       - rectObj.pos = vec2(x, y)
-       - textObj.pos = vec2(x+w/2, y+h/2+2)    // text เป็น ASCII
+  7. Rotation: rect → item.shapeObj.angle = item.rotation (circle skip)
+  8. SYNC POS ทุกเฟรม:
+       - circle: shapeObj.pos = vec2(x + w/2, y + h/2)  // anchor center
+       - rect:   shapeObj.pos = vec2(x, y)                // anchor topleft
+       - textObj: pos = vec2(x + w/2, y + h/2 + 2)
 
-  5. ถ้าไม่มี items เหลือ + spawnTimer > 30:
+  9. ถ้าไม่มี items เหลือ + spawnTimer > 30:
        - spawnNextQuestion()
 
 อัปเดต HUD (Score, Lives, Combo, Progress)
@@ -239,8 +307,9 @@ for each falling item:
 questionCount++
 if (questionCount % 10 === 0):
   isBoss = true
+  flashMsg('BOSS LEVEL!')
   ถ้า random > 0.5:
-    Speed Rush → createSingleQuestion(isBoss=true)
+    Speed Rush → createSingleQuestion()
   ถ้า random <= 0.5:
     Multi-Target → createMultiQuestion()  // 2 โจทย์ ซ้าย+ขวา
 ```
@@ -248,16 +317,15 @@ if (questionCount % 10 === 0):
 ### Pause/Resume Flow
 ```
 คลิก PAUSE หรือกด P/Esc:
-  ├─ gameRunning = false
-  ├─ k.debug.pause() (ถ้ามี)
-  ├─ สร้าง pause overlay (rect มืด + RESUME + MENU buttons)
-  └─ pointer ไปที่ pause overlay แทน
+  ├─ uiManager.togglePause()
+  ├─ ถ้า paused: _showPauseOverlay() (rect มืด + RESUME + MENU)
+  └─ ถ้า resumed: _hidePauseOverlay()
 
 คลิก RESUME:
-  └─ gameRunning = true, destroy overlay
+  └─ _togglePause()
 
 คลิก MENU:
-  └─ k.go('main-menu')
+  └─ uiManager.paused = false → k.go('main-menu')
 ```
 
 ## 3. Sound System
@@ -294,15 +362,19 @@ speak(text):
 
 ### Bug: Cannot click falling items (แก้แล้ว)
 **Root cause:** Click handler ใช้ตำแหน่งตอน spawn (y = -200) ไม่ใช่ตำแหน่งจริง
-**Fix:** ใน `_gameUpdate()` sync `item.rectObj.pos` ทุกเฟรม แล้ว DOM click ใช้ pos จริง
+**Fix:** ใน `_gameUpdate()` sync `item.shapeObj.pos` ทุกเฟรม แล้ว DOM click ใช้ pos จริง
 
-### Bug: Duplicate "width" property (แก้แล้ว)
-**Root cause:** ใช้ `rect()` + `text()` ใน `add()` เดียวกัน
-**Fix:** แยกเป็น 2 objects ผ่าน `_addRect()` และ `_addText()`
+### Bug: Circle text offset (แก้แล้ว)
+**Root cause:** Kaboom circle ใช้ `anchor: center` แต่ sync pos ใช้ topleft origin
+**Fix:** ใน `_gameUpdate()` ตรวจ `item.shape === 'circle'` → offset pos + w/2, + h/2
 
-### Bug: ES Module ไม่เห็น global functions (แก้แล้ว)
-**Root cause:** kaboom() ไม่ set globals เมื่อ import แบบ ES module
-**Fix:** เรียกผ่าน `this.k.text(...)` หรือใช้ wrapper methods (`_addText`, `_addRect`)
+### Bug: Progress "ข้อที่ 0/10" (แก้แล้ว)
+**Root cause:** `questionCount % 10` → เมื่อ questionCount=10 ได้ค่า 0
+**Fix:** `((questionCount - 1) % 10) + 1` → 1→1, 10→10, 11→1
+
+### Bug: `aria-hidden` on focused element (แก้แล้ว)
+**Root cause:** `#game-ui-overlay` มี `aria-hidden="true"` ตลอดเวลา แม้มี DOM panel ที่มี focus
+**Fix:** toggle `aria-hidden="false"` เมื่อเปิด panel, `aria-hidden="true"` เมื่อปิด
 
 ## 5. How to Extend
 
@@ -342,7 +414,7 @@ this.k.add([
 
 ```json
 {
-    "game": { "name": "Math Kids Game", "version": "1.1.0", "language": "th" },
+    "game": { "name": "Math Kids Game", "version": "1.2.0", "language": "th" },
     "display": { "width": 1280, "height": 720, "responsive": true },
     "difficulty": {
         "levels": [
@@ -363,10 +435,14 @@ this.k.add([
         "pointerEvents": true,
         "touchSupport": true
     },
-    "audio": {
-        "bgmVolume": 0.5, "sfxVolume": 0.7, "defaultMuted": false,
-        "sounds": { "correct": "assets/audio/correct.mp3", ... }
+    "leaderboard": {
+        "enabled": true,
+        "maxEntries": 50,
+        "supabaseUrl": "https://<project>.supabase.co",
+        "supabaseAnonKey": "eyJ...",
+        "table": "leaderboard"
     },
+    "audio": { ... },
     "colors": { ... }
 }
 ```
@@ -383,9 +459,9 @@ this.k.add([
 เพิ่ม log ใน `_onCanvasPointer()`:
 ```javascript
 console.log('CLICK:', clickX, clickY);
-console.log('ITEMS:', this.fallingItems);
+console.log('ITEMS:', this.fallingItems.length);
 for (const item of this.fallingItems) {
-    console.log('  item', item.value, 'at', item.rectObj.pos.x, item.rectObj.pos.y);
+    console.log('  item', item.value, item.shape, 'at', item.x, item.y);
 }
 ```
 

@@ -39,13 +39,27 @@
   - `_addText()` เลือก DOM อัตโนมัติเมื่อข้อความมี non-ASCII
   - ข้อความ ASCII ยังใช้ Kaboom text ตามเดิม
 
+## ✅ เสร็จแล้ว (v1.2 — Mobile + Leaderboard + UX)
+- [x] **Leaderboard** - Cloud sync ผ่าน Supabase + localStorage fallback
+  - `LeaderboardService` ใน `js/modules/leaderboard-service.js`
+  - `PlayerProfile` สำหรับบันทึกชื่อเล่น
+  - หน้า leaderboard พร้อม scroll + เรียงตามคะแนน
+  - `supabase-migration.sql` สำหรับตั้งค่า Supabase
+- [x] **Responsive 3 tiers** - Phone (720×1280 scale), Tablet, Desktop (1280×720)
+  - `viewport.js` จัดการ CSS scale + canvas sizing อัตโนมัติ
+  - `_tierSize()` ปรับ UI, fonts, buttons ตาม tier
+  - Mobile sizing boost: items, buttons, text ใหญ่ขึ้น ~2x
+- [x] **Circle falling items** - สลับ rect/circle 50/50 + rotation
+- [x] **Progress counter fix** - ข้อที่ X/10 ไม่กระโดดเป็น 0/10
+- [x] **Wall bounce** - items drift แนวนอน + กระดอนขอบจอ
+- [x] **aria-hidden accessibility fix** - toggle เมื่อ DOM panels เปิด/ปิด
+
 ## 🚧 กำลังทำ / ค้างอยู่
 - [ ] **ไฟล์เสียงจริง** - แทนที่ procedural SFX ด้วย mp3 (มี config path แล้วใน `audio.sounds`)
 - [ ] **WordGame ในเมนู** - ปัจจุบัน MathGame เป็น default; ยังไม่มีปุ่มเลือกโหมด
 - [ ] **Animations** - ปุ่ม hover, item entrance, screen transitions
-- [ ] **UI polish** - progress bar กราฟิก, อนิเมชัน
 
-## 🌟 ระยะกลาง (v1.2)
+## 🌟 ระยะกลาง (v1.3)
 - [ ] **Player character** - animated sprite
 - [ ] **Power-ups** - 2x score, slow motion, extra life
 - [ ] **Stats screen** - accuracy, streaks, history
@@ -53,12 +67,11 @@
 - [ ] **PWA** - manifest + service worker สำหรับ offline
 
 ## 🚀 ระยะไกล (v2.0)
-- [ ] **Multiplayer จริง** - Supabase integration (placeholder อยู่ใน `network.js`)
+- [ ] **Multiplayer จริง** - Supabase Realtime (placeholder อยู่ใน `network.js`)
   - [ ] Create/join room
   - [ ] Sync questions
   - [ ] Real-time score board
   - [ ] Host/guest logic
-- [ ] **Leaderboard** - global ranking
 - [ ] **Accounts** - login, save progress
 - [ ] **More game modes**:
   - [ ] Time attack
@@ -79,8 +92,7 @@
 | Bug | Severity | Status | Notes |
 |-----|----------|--------|-------|
 | Thai voice fallback เป็น English | Low | Known | ใช้ English ถ้า OS ไม่มี Thai TTS voice |
-| `kaboom` config บางค่ายัง hard-coded | Low | Known | ส่วนใหญ่อ่านจาก config แล้ว |
-| WordGame ยังไม่เชื่อมปุ่มเลือกโหมด | Low | Planned | v1.2 |
+| WordGame ยังไม่เชื่อมปุ่มเลือกโหมด | Low | Planned | v1.3 |
 | Multiplayer เป็น stub | Medium | Known | v2.0 |
 
 ## 📊 Metrics ความสำเร็จ
@@ -93,7 +105,8 @@
 
 ## 🗓️ Timeline (เป้าหมาย)
 - **มิถุนายน 2026**: v1.1 ✅ (UX + architecture + bg + font fix)
-- **กรกฎาคม 2026**: v1.2 (player, power-ups, stats, PWA)
+- **มิถุนายน 2026**: v1.2 ✅ (Mobile responsive, Leaderboard, Circle items, Progress fix)
+- **กรกฎาคม 2026**: v1.3 (player, power-ups, stats, PWA)
 - **สิงหาคม 2026**: v2.0 (Multiplayer)
 - **กันยายน 2026**: v3.0 (Mobile + social)
 

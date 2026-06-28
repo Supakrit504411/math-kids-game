@@ -20,7 +20,8 @@
 - **Web Audio API** - เสียง SFX แบบ procedural
 - **SpeechSynthesis** - เสียงอ่านโจทย์ภาษาไทย
 - **HTML overlay** - แสดงข้อความไทย (Kaboom canvas วัด glyph ไทยไม่ได้)
-- **Supabase (placeholder)** - Multiplayer 2 คน (ยังไม่ implement)
+- **Supabase** - Cloud Leaderboard (sync คะแนนระหว่างผู้เล่น)
+- **Responsive 3 tiers** - Phone (720×1280 scale), Tablet, Desktop (1280×720)
 
 ## โครงสร้างโฟลเดอร์
 
@@ -28,25 +29,30 @@
 math-kids-game/
 ├── index.html              # Entry point + overlay div สำหรับข้อความไทย
 ├── css/
-│   └── style.css           # Reset, canvas, overlay styling
+│   └── style.css           # Reset, canvas, overlay, responsive styling
 ├── config/
-│   └── game-config.json    # ค่าตั้งค่า v1.1.0: ความยาก, เสียง, สี, controls
+│   └── game-config.json    # v1.2.0: ความยาก, เสียง, สี, leaderboard (Supabase)
+├── supabase-migration.sql  # SQL สำหรับสร้างตาราง leaderboard ใน Supabase
 ├── js/
-│   ├── main.js             # โหลด Kaboom + Font (Kanit) + bg + GameEngine
+│   ├── main.js             # โหลด Kaboom + Font (Kanit) + viewport + GameEngine
 │   ├── engine/
-│   │   ├── game-engine.js  # Core ~860 บรรทัด: scenes, loop, DOM click, SoundEngine
+│   │   ├── game-engine.js  # Core ~1380+ บรรทัด: scenes, loop, DOM click, SoundEngine
 │   │   ├── question-engine.js  # Abstract Base Class สำหรับเกมถามตอบ
 │   │   └── network.js      # Supabase multiplayer placeholder
 │   ├── modules/
 │   │   ├── ui-manager.js   # คะแนน, ชีวิต, combo, high score, mute, tutorial state
-│   │   └── quest-system.js # Achievement tracker + แสดง banner
+│   │   ├── quest-system.js # Achievement tracker + แสดง banner
+│   │   ├── leaderboard-service.js  # Leaderboard: local + Supabase cloud sync
+│   │   └── player-profile.js       # จัดการชื่อเล่น (localStorage)
 │   ├── games/
 │   │   ├── math-game.js    # MathGame extends QuestionEngine
 │   │   └── word-game.js    # WordGame extends QuestionEngine
 │   └── utils/
-│       └── helpers.js      # generateOptions, shuffle, Timer, lerp, formatTime
+│       ├── helpers.js      # generateOptions, shuffle, Timer, lerp, formatTime
+│       └── viewport.js     # Responsive 3 tiers: phone/tablet/desktop + CSS scale
 └── assets/
-    ├── bg.png              # ภาพพื้นหลัง (~2MB)
+    ├── bg.png              # ภาพพื้นหลัง landscape (~2MB)
+    ├── bg-mobile.png       # ภาพพื้นหลัง portrait มือถือ
     └── fonts/
         └── Kanit-Regular.ttf  # ฟอนต์ไทย (Google Fonts)
 ```
@@ -81,9 +87,10 @@ python -m http.server 8765   # ถ้าติดตั้ง Python ไว้
 
 ### 1. หน้าเมนู
 - **START GAME** - เริ่มเกม
-- **SETTINGS** - ตั้งค่าความยาก 1-3
+- **LEADERBOARD** - อันดับคะแนน (sync ผ่าน Supabase)
 - ปุ่ม **MUTE/SND** - เปิด/ปิดเสียง (persist ใน localStorage)
 - แสดง High Score จาก localStorage
+- **ชื่อเล่น** - ใส่ชื่อก่อนเริ่มเล่น (persist ใน localStorage)
 
 ### 2. หน้าเล่นเกม
 **Layout:**
@@ -102,8 +109,9 @@ python -m http.server 8765   # ถ้าติดตั้ง Python ไว้
 **UX พิเศษ:**
 - **Pause/Resume** - ปุ่มหรือกด `P`/`Esc`, มี overlay
 - **Tutorial overlay** - แสดงครั้งแรกเล่น (localStorage)
-- **Progress indicator** - "ข้อที่ X / 10"
-- **Touch/Pointer support** - รองรับมือถือ, falling items เล็กลงบนจอแคบ
+- **Progress indicator** - "ข้อที่ X / 10" (แสดงตามรอบ boss)
+- **Circle & Rect** - falling items สลับรูปทรง 50/50 พร้อมหมุน
+- **Touch/Pointer support** - รองรับมือถือ, responsive 3 tiers (phone/tablet/desktop)
 - **Restart** จาก Game Over ("เล่นอีกครั้ง")
 
 ### 3. Boss Level (ทุก 10 ข้อ)
@@ -135,8 +143,20 @@ python -m http.server 8765   # ถ้าติดตั้ง Python ไว้
 - `assets/fonts/Kanit-Regular.ttf` - โหลดด้วย `k.loadFont('kanit', ...)`
 - รอ `k.onLoad()` ก่อนเริ่ม game scenes (`waitKaboomLoad`)
 
-### 8. Multiplayer (placeholder)
-ดูไฟล์ `js/engine/network.js` - มีโครงสร้าง Supabase แต่ยังไม่ implement จริง
+### 8. Leaderboard (Cloud + Local)
+- `LeaderboardService` ใน `js/modules/leaderboard-service.js`
+- **Local**: บันทึกคะแนนใน `localStorage` (fallback อัตโนมัติ)
+- **Cloud**: sync ผ่าน Supabase REST API (ต้องตั้งค่าใน `game-config.json`)
+- แสดงอันดับรวม, แยกตามระดับความยาก (ง่าย/ปานกลาง/ยาก)
+- รองรับการบันทึกชื่อเล่นผ่าน `PlayerProfile`
+- ดู `supabase-migration.sql` สำหรับการตั้งค่า Supabase
+
+### 9. Responsive 3 Tiers
+- `viewport.js` จัดการ responsive อัตโนมัติตามขนาดจอ
+- **Phone** (< 768px): canvas 720×1280 portrait + CSS scale to fit
+- **Tablet** (768-1200px): orientation-aware + CSS scale
+- **Desktop** (> 1200px): native 1280×720
+- `_tierSize()` ปรับขนาด UI, fonts, buttons ตาม tier
 
 ## สถาปัตยกรรม
 
@@ -149,11 +169,13 @@ main.js
   ├─ new GameEngine()
   ├─ setConfig(config), markAssetsReady()
   └─ initContext(kaboomInstance)
+       ├─ k.scene('enter-name', ...)
        ├─ k.scene('main-menu', ...)
+       ├─ k.scene('leaderboard', ...)
        ├─ k.scene('game', ...)
        ├─ k.scene('settings', ...)
        ├─ k.scene('game-over', ...)
-       └─ k.go('main-menu')
+       └─ k.go('enter-name')  // เริ่มที่หน้าใส่ชื่อ
 ```
 
 ### การแสดงข้อความ (สำคัญ)
@@ -178,10 +200,10 @@ const clickY = ((e.clientY - rc.top) / rc.height) * gameH;
 ```
 
 ### Falling Items System
-- สร้าง `rect` + `text` แยกกัน (หลีกเลี่ยง duplicate width bug)
-- เก็บข้อมูล: `{ rectObj, textObj, x, y, vy, isCorrect, actionFn, ... }`
-- `_gameUpdate()` sync pos ทุกเฟรม
-- DOM click หัก box จาก pos จริงของ rectObj
+- สร้าง `rect` + `text` หรือ `circle` + `text` แยกกัน (หลีกเลี่ยง duplicate width bug)
+- เก็บข้อมูล: `{ shapeObj, textObj, x, y, w, h, vy, vx, isCorrect, actionFn, shape, rotation, ... }`
+- `_gameUpdate()` sync pos ทุกเฟรม (แยก anchor สำหรับ circle center vs rect topleft)
+- DOM click หัก box จาก pos จริงของ shapeObj
 
 ### Sound Engine
 อยู่ใน `GameEngine` class เป็น `this.sound` (SoundEngine)
@@ -231,9 +253,9 @@ item.textObj.pos.y = item.y + item.h / 2 + 2;
 
 ### งานที่ค้างอยู่
 1. **ไฟล์เสียงจริง** - แทนที่ procedural SFX ด้วย mp3 (มี config path แล้วใน `audio.sounds`)
-2. **Multiplayer จริง** - Implement Supabase ใน `network.js`
-3. **WordGame ในเมนู** - ปัจจุบัน math-game เป็น default, WordGame ยังไม่ได้เชื่อมปุ่มเลือก
-4. **Player character / Power-ups** - ยังไม่มี
+2. **WordGame ในเมนู** - ปัจจุบัน math-game เป็น default, WordGame ยังไม่ได้เชื่อมปุ่มเลือก
+3. **Player character / Power-ups** - ยังไม่มี
+4. **PWA** - manifest + service worker สำหรับ offline
 
 ### เพิ่มเกมใหม่
 สร้างไฟล์ใน `js/games/` extend `QuestionEngine`:

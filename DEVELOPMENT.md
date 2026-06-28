@@ -117,6 +117,9 @@ const txt = this._addText('ข้อความไทย', x, y, size, [r,g,b])
 - [ ] Mute toggle บันทึกใน localStorage
 - [ ] Tutorial แสดงครั้งแรกเล่น
 - [ ] Progress indicator อัปเดต
+- [ ] Leaderboard แสดงผล + ข้อความ cloud/local ถูกต้อง
+- [ ] Mobile responsive — items + fonts ใหญ่พอ มองเห็นชัด
+- [ ] Circle + rect items หมุน + sync ตำแหน่งถูกต้อง
 - [ ] ข้อความไทยแสดงถูกต้อง (ไม่มี IndexSizeError)
 - [ ] คลิกปุ่ม "เล่นอีกครั้ง" → เริ่มเกมใหม่
 
@@ -205,6 +208,13 @@ const iv = setInterval(() => {
 - Netlify / Vercel
 - หรือ static hosting ใดๆ
 
+### Supabase Setup (Leaderboard)
+1. สร้าง project ที่ https://supabase.com
+2. Run `supabase-migration.sql` ใน SQL Editor
+3. คัดลอก `Project URL` + `anon public` key จาก Project Settings → API
+4. ใส่ใน `config/game-config.json` → `leaderboard.supabaseUrl` + `leaderboard.supabaseAnonKey`
+5. Leaderboard จะ sync อัตโนมัติ (fallback ไป localStorage ถ้าเชื่อมต่อไม่ได้)
+
 ### PWA (ถ้าต้องการ)
 เพิ่ม `manifest.json` + service worker
 
@@ -248,6 +258,12 @@ const iv = setInterval(() => {
 **อาการ:** ตัวเลขตก แต่ไม่มี label
 **สาเหตุ:** falling item text ใช้ Kaboom text (ASCII) อยู่แล้ว — ไม่น่ามีปัญหา
 **วิธีแก้:** เช็ค `_gameUpdate()` ว่า `item.textObj.pos` ถูก sync ทุกเฟรม
+
+### Leaderboard แสดง ERROR (ERR_NAME_NOT_RESOLVED)
+**อาการ:** console แสดง `POST .../rest/v1/leaderboard net::ERR_NAME_NOT_RESOLVED`
+**สาเหตุ:** Supabase project ถูกลบหรือ URL ผิด
+**วิธีแก้:** ไม่ต้องแก้ — เกม fallback ไป localStorage อัตโนมัติ Leaderboard ยังทำงานได้แบบ local
+  ถ้าอยากใช้ cloud: สร้าง Supabase project ใหม่ → run `supabase-migration.sql` → อัปเดต config
 
 ## Resources
 

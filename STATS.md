@@ -4,35 +4,40 @@
 
 | Type | Count |
 |------|-------|
-| JavaScript | 9 |
+| JavaScript | 11 |
 | HTML | 1 |
 | CSS | 1 |
 | JSON | 1 |
+| SQL | 1 |
 | Markdown (docs) | 6 |
-| Assets (png, ttf) | 2 |
-| **Total** | **20** |
+| Assets (png, ttf) | 3 |
+| **Total** | **24** |
 
 ## Lines of Code
 
 | File | Lines (approx) | Notes |
 |------|-----------------|-------|
-| `game-engine.js` | ~860 | Core engine + SoundEngine |
+| `game-engine.js` | ~1400 | Core engine + SoundEngine |
+| `leaderboard-service.js` | ~165 | Leaderboard: local + Supabase cloud |
+| `player-profile.js` | ~50 | จัดการชื่อเล่น (localStorage) |
 | `quest-system.js` | ~120 | Achievement tracker (rewritten) |
 | `ui-manager.js` | ~100 | + mute + tutorial state |
 | `helpers.js` | ~130 | Utilities |
+| `viewport.js` | ~130 | Responsive 3 tiers + CSS scale |
 | `network.js` | ~140 | Supabase placeholder (stub) |
-| `main.js` | ~80 | + font + bg + waitKaboomLoad |
+| `main.js` | ~135 | + viewport + responsive init |
 | `question-engine.js` | ~75 | Abstract base |
 | `math-game.js` | ~55 | MathGame (active) |
 | `word-game.js` | ~80 | WordGame (not yet in menu) |
-| `style.css` | ~55 | + overlay styling |
+| `style.css` | ~310 | + responsive + DOM panels |
 | `index.html` | ~25 | + overlay div |
-| `game-config.json` | ~80 | v1.1.0 |
-| **Total** | **~1820** | (เพิ่มขึ้นจาก ~1350 ใน v1.0) |
+| `game-config.json` | ~85 | v1.2.0 + leaderboard config |
+| `supabase-migration.sql` | ~38 | SQL setup |
+| **Total** | **~3040** | (เพิ่มจาก ~1820 ใน v1.1) |
 
 ## Complexity
-- **Classes:** 7 (GameEngine, SoundEngine, QuestionEngine, MathGame, WordGame, UIManager, QuestSystem)
-- **Scenes:** 4 (main-menu, game, settings, game-over)
+- **Classes:** 9 (GameEngine, SoundEngine, QuestionEngine, MathGame, WordGame, UIManager, QuestSystem, LeaderboardService, PlayerProfile)
+- **Scenes:** 6 (enter-name, main-menu, leaderboard, game, settings, game-over)
 - **Game modes:** 1 active (math) + 1 ready (word, not yet in menu)
 - **Boss types:** 2 (rush, multi)
 - **Difficulty levels:** 3
@@ -44,7 +49,7 @@
 - **Vanilla JS** (ES modules, no framework)
 - **Web Audio API** (built-in)
 - **SpeechSynthesis** (built-in, Thai voice optional)
-- **Supabase** (planned, placeholder in `network.js`)
+- **Supabase** - Leaderboard cloud sync (ใช้งานแล้ว)
 
 ## Performance
 - **Target FPS:** 60
@@ -53,8 +58,8 @@
 - **Bundle:** code ~50KB + Kaboom CDN ~120KB + bg.png ~2MB + Kanit ~170KB
 
 ## Code Coverage
-- **Used:** ~85%
-  - game-engine, question-engine, math-game, ui-manager, helpers, quest-system — all active
+- **Used:** ~88%
+  - game-engine, question-engine, math-game, ui-manager, helpers, quest-system, leaderboard-service, player-profile, viewport — all active
 - **Unused:** ~15%
   - `network.js` (stub, no import in game-engine)
   - `word-game.js` (logic ready, not wired into menu)
@@ -76,12 +81,14 @@ After:  1820 lines, 20 files, 85% code used
 +470 lines (UX features, refactor, bg/font, DOM overlay)
 ```
 
-### v1.1 → v1.2 (เป้าหมาย)
+### v1.1 → v1.2 (เสร็จแล้ว)
 ```
-Target: ~2200 lines (+380 for player, power-ups, stats, PWA)
+From:   1820 lines, 20 files, 85% code used
+To:     3040 lines, 24 files, 88% code used
++1220 lines (leaderboard, responsive 3 tiers, name entry, circle items, progress fix)
 ```
 
-### v1.2 → v2.0 (เป้าหมาย)
+### v1.3 → v2.0 (เป้าหมาย)
 ```
 Target: ~2800 lines (+600 for multiplayer, accounts, modes)
 ```
@@ -106,32 +113,37 @@ Target: ~2800 lines (+600 for multiplayer, accounts, modes)
 - [x] Pause/Resume works
 - [x] Tutorial shows on first play
 - [x] Mute persists
+- [x] Leaderboard works (local + cloud)
+- [x] Player name entry + persist
+- [x] Progress counter correct (no 0/10 bug)
 
 ### UX
 - [ ] Thai voice works 80% of time (ขึ้น OS)
 - [x] Clear feedback on correct/wrong (particle + sound + highlight)
-- [x] Responsive buttons (touch + mouse)
+- [x] Responsive 3 tiers (phone/tablet/desktop)
+- [x] Circle + rect falling items with rotation
+- [x] Leaderboard DOM panel with scroll
 - [x] Thai text rendered correctly (DOM overlay)
-- [x] Background image rendered
 
 ---
 
 ## 🔍 Code Health
 
 ### Good
-- ✅ Clear architecture (GameEngine + QuestionEngine + UIManager)
+- ✅ Clear architecture (GameEngine + QuestionEngine + UIManager + Leaderboard)
 - ✅ Modular design (engine/modules/games/utils)
 - ✅ Good documentation (6 ไฟล์ .md)
 - ✅ Event-driven (DOM click + Kaboom update)
 - ✅ No frameworks (pure Vanilla JS)
 - ✅ Thai UX (overlay แยกจาก Kaboom text)
-- ✅ Persistence (localStorage: high score, mute, tutorial)
-- ✅ Touch support
+- ✅ Persistence (localStorage: high score, mute, tutorial, player name)
+- ✅ Touch support + responsive 3 tiers
+- ✅ Cloud leaderboard via Supabase (graceful fallback)
+- ✅ Circle + rect falling items with rotation
 
 ### Needs Improvement
 - ⚠️ `network.js` unused stub
 - ⚠️ WordGame not wired to menu
-- ⚠️ Some config values still hard-coded (e.g. boss threshold read จาก gameplay.bossSpawnInterval)
 - ⚠️ No automated tests
 - ⚠️ No type safety (no TypeScript)
 - ⚠️ Audio files (mp3) not present, SFX เป็น procedural อยู่
@@ -140,5 +152,5 @@ Target: ~2800 lines (+600 for multiplayer, accounts, modes)
 
 ## 📝 Notes
 - ข้อมูลนี้สร้างขึ้นโดย AI Agent
-- อัปเดตครั้งสุดท้าย: 2026-06-27 (v1.1.1)
+- อัปเดตครั้งสุดท้าย: 2026-06-28 (v1.2.0)
 - สามารถแก้ไขได้ตลอดเวลา
