@@ -606,7 +606,7 @@ export class GameEngine {
         const H = this.k.height();
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 30, 140], 0);
-        this._addText('MATH KIDS', W / 2, H * 0.18, this._tierSize({ phone: 48, desktop: 64 }), [255, 230, 109]);
+        this._addText('MATH KIDS', W / 2, H * 0.14, this._tierSize({ phone: 64, desktop: 64 }), [255, 230, 109]);
         this._showNameEntryPanel(() => this.k.go('main-menu'));
     }
 
@@ -641,25 +641,25 @@ export class GameEngine {
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
 
-        const titleSize = this._tierSize({ phone: 64, tablet: 80, desktop: 96 });
-        const titleY = this._tierSize({ phone: 100, tablet: 115, desktop: 130 });
+        const titleSize = this._tierSize({ phone: 88, tablet: 80, desktop: 96 });
+        const titleY = this._tierSize({ phone: 140, tablet: 115, desktop: 130 });
         this._addText('MATH', W * 0.35, titleY, titleSize, [255, 107, 107]);
         this._addText('KIDS', W * 0.65, titleY, titleSize, [78, 205, 196]);
-        this._addText('เกมเรียนคณิตศาสตร์สนุกๆ!', W / 2, this._tierSize({ phone: 170, tablet: 190, desktop: 210 }), this._tierSize({ phone: 24, tablet: 27, desktop: 30 }), [255, 255, 255]);
+        this._addText('เกมเรียนคณิตศาสตร์สนุกๆ!', W / 2, this._tierSize({ phone: 230, tablet: 190, desktop: 210 }), this._tierSize({ phone: 36, tablet: 27, desktop: 30 }), [255, 255, 255]);
 
         const playerName = this.playerProfile.getName();
         if (playerName) {
-            this._addText('สวัสดี, ' + playerName + '!', W / 2, this._tierSize({ phone: 200, tablet: 220, desktop: 240 }), this._tierSize({ phone: 20, tablet: 22, desktop: 24 }), [255, 215, 0]);
+            this._addText('สวัสดี, ' + playerName + '!', W / 2, this._tierSize({ phone: 280, tablet: 220, desktop: 240 }), this._tierSize({ phone: 32, tablet: 22, desktop: 24 }), [255, 215, 0]);
         }
 
-        const btnW = this._tierSize({ phone: Math.min(280, W - 48), tablet: 320, desktop: 280 });
-        const btnH = this._tierSize({ phone: 58, tablet: 65, desktop: 72 });
+        const btnW = this._tierSize({ phone: Math.min(520, W - 48), tablet: 320, desktop: 280 });
+        const btnH = this._tierSize({ phone: 96, tablet: 65, desktop: 72 });
         const btnX = W / 2 - btnW / 2;
-        const startY = this._tierSize({ phone: 240, tablet: 270, desktop: 310 });
-        const gap = this._tierSize({ phone: 16, tablet: 20, desktop: 24 });
+        const startY = this._tierSize({ phone: 340, tablet: 270, desktop: 310 });
+        const gap = this._tierSize({ phone: 28, tablet: 20, desktop: 24 });
 
         this._addRect(btnX, startY, btnW, btnH, [255, 80, 80], 14);
-        this._addText('START GAME', W / 2, startY + btnH / 2 + 2, this._tierSize({ phone: 26, tablet: 29, desktop: 32 }), [255, 255, 255]);
+        this._addText('START GAME', W / 2, startY + btnH / 2 + 2, this._tierSize({ phone: 40, tablet: 29, desktop: 32 }), [255, 255, 255]);
         this._addClickable(btnX, startY, btnW, btnH, () => {
             if (!this.playerProfile.hasName()) {
                 this.k.go('enter-name');
@@ -672,19 +672,19 @@ export class GameEngine {
 
         const lbY = startY + btnH + gap;
         this._addRect(btnX, lbY, btnW, btnH, [255, 200, 60], 14);
-        this._addText('LEADERBOARD', W / 2, lbY + btnH / 2 + 2, this._tierSize({ phone: 24, tablet: 26, desktop: 28 }), [40, 40, 60]);
+        this._addText('LEADERBOARD', W / 2, lbY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 26, desktop: 28 }), [40, 40, 60]);
         this._addClickable(btnX, lbY, btnW, btnH, () => this.k.go('leaderboard'));
 
         const settingsY = lbY + btnH + gap;
         this._addRect(btnX, settingsY, btnW, btnH, [100, 180, 255], 14);
-        this._addText('SETTINGS', W / 2, settingsY + btnH / 2 + 2, this._tierSize({ phone: 26, tablet: 29, desktop: 32 }), [255, 255, 255]);
+        this._addText('SETTINGS', W / 2, settingsY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 29, desktop: 32 }), [255, 255, 255]);
         this._addClickable(btnX, settingsY, btnW, btnH, () => this.k.go('settings'));
 
         // ปุ่ม Mute (เปิด/ปิดเสียง)
-        const muteSize = 60;
+        const muteSize = this._tierSize({ phone: 90, tablet: 60, desktop: 60 });
         const muteX = W - muteSize - 20, muteY = 20;
         this._addRect(muteX, muteY, muteSize, muteSize, [60, 60, 90], 8);
-        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', muteX + muteSize / 2, muteY + muteSize / 2 + 2, 16, [255, 255, 255]);
+        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', muteX + muteSize / 2, muteY + muteSize / 2 + 2, this._tierSize({ phone: 26, tablet: 16, desktop: 16 }), [255, 255, 255]);
         this._addClickable(muteX, muteY, muteSize, muteSize, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
@@ -713,33 +713,33 @@ export class GameEngine {
 
         this.mathGame = new MathGame(this.currentDifficulty);
 
-        const hudY = this._tierSize({ phone: 36, tablet: 44, desktop: 50 });
-        const hudSize = this._tierSize({ phone: 20, tablet: 24, desktop: 26 });
-        this.scoreTextObj = this._addText('Score: 0', this._tierSize({ phone: 90, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
-        this.livesTextObj = this._addText('Lives: 3', W - this._tierSize({ phone: 90, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
-        this.comboTextObj = this._addText('', W / 2, this._tierSize({ phone: 68, tablet: 76, desktop: 85 }), this._tierSize({ phone: 18, tablet: 20, desktop: 22 }), [255, 215, 0]);
-        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - this._tierSize({ phone: 28, tablet: 24, desktop: 20 }), this._tierSize({ phone: 18, tablet: 19, desktop: 20 }), [255, 255, 255]);
+        const hudY = this._tierSize({ phone: 60, tablet: 44, desktop: 50 });
+        const hudSize = this._tierSize({ phone: 36, tablet: 24, desktop: 26 });
+        this.scoreTextObj = this._addText('Score: 0', this._tierSize({ phone: 160, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
+        this.livesTextObj = this._addText('Lives: 3', W - this._tierSize({ phone: 160, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
+        this.comboTextObj = this._addText('', W / 2, this._tierSize({ phone: 104, tablet: 76, desktop: 85 }), this._tierSize({ phone: 30, tablet: 20, desktop: 22 }), [255, 215, 0]);
+        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - this._tierSize({ phone: 48, tablet: 24, desktop: 20 }), this._tierSize({ phone: 32, tablet: 19, desktop: 20 }), [255, 255, 255]);
 
         // BACK button (ซ้ายบน)
-        const backW = this._tierSize({ phone: 64, tablet: 72, desktop: 70 });
-        const backH = this._tierSize({ phone: 32, tablet: 36, desktop: 34 });
+        const backW = this._tierSize({ phone: 120, tablet: 72, desktop: 70 });
+        const backH = this._tierSize({ phone: 56, tablet: 36, desktop: 34 });
         this._addRect(8, 8, backW, backH, [80, 80, 120], 6);
-        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, this._tierSize({ phone: 14, tablet: 15, desktop: 17 }), [255, 255, 255]);
+        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, this._tierSize({ phone: 26, tablet: 15, desktop: 17 }), [255, 255, 255]);
         this._addClickable(8, 8, backW, backH, () => this.k.go('main-menu'));
 
         // PAUSE button (ขวาบน)
-        const pauseW = this._tierSize({ phone: 64, tablet: 68, desktop: 70 });
-        const pauseH = this._tierSize({ phone: 32, tablet: 36, desktop: 34 });
+        const pauseW = this._tierSize({ phone: 120, tablet: 68, desktop: 70 });
+        const pauseH = this._tierSize({ phone: 56, tablet: 36, desktop: 34 });
         const pauseX = W - pauseW - 8;
         const pauseY = this._tierSize({ phone: 48, tablet: 60, desktop: 70 });
         this._addRect(pauseX, pauseY, pauseW, pauseH, [80, 80, 120], 6);
-        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, this._tierSize({ phone: 14, tablet: 15, desktop: 16 }), [255, 255, 255]);
+        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, this._tierSize({ phone: 26, tablet: 15, desktop: 16 }), [255, 255, 255]);
         this._addClickable(pauseX, pauseY, pauseW, pauseH, () => this._togglePause());
 
         // Mute button
         const muteBtnY = this._tierSize({ phone: 44, tablet: 50, desktop: 55 });
         this._addRect(8, muteBtnY, backW, backH, [60, 60, 90], 6);
-        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, this._tierSize({ phone: 12, tablet: 13, desktop: 14 }), [255, 255, 255]);
+        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, this._tierSize({ phone: 22, tablet: 13, desktop: 14 }), [255, 255, 255]);
         this._addClickable(8, muteBtnY, backW, backH, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
@@ -768,19 +768,20 @@ export class GameEngine {
         // พื้นหลังมืด
         const bg = this._addRect(0, 0, W, H, [0, 0, 0, 180], 0);
         // กล่อง — responsive ตาม tier
-        const boxW = this._tierSize({ phone: Math.min(520, W - 40), tablet: 580, desktop: 600 });
-        const boxH = this._tierSize({ phone: 300, tablet: 310, desktop: 320 });
+        const boxW = this._tierSize({ phone: Math.min(620, W - 24), tablet: 580, desktop: 600 });
+        const boxH = this._tierSize({ phone: 500, tablet: 310, desktop: 320 });
         const boxX = W / 2 - boxW / 2, boxY = H / 2 - boxH / 2;
         this._addRect(boxX, boxY, boxW, boxH, [40, 50, 80], 14);
-        this._addText('วิธีเล่น', W / 2, boxY + 50, this._tierSize({ phone: 38, tablet: 41, desktop: 44 }), [255, 230, 109]);
-        this._addText('ตัวเลขจะตกลงมาจากด้านบน', W / 2, boxY + 120, this._tierSize({ phone: 20, tablet: 22, desktop: 24 }), [255, 255, 255]);
-        this._addText('คลิก/แตะคำตอบที่ถูกต้อง', W / 2, boxY + 160, this._tierSize({ phone: 20, tablet: 22, desktop: 24 }), [255, 255, 255]);
-        this._addText('ตอบผิดจะเสียชีวิต ตอบถูกติดต่อกันจะได้ Combo!', W / 2, boxY + 200, this._tierSize({ phone: 18, tablet: 20, desktop: 22 }), [255, 200, 100]);
+        this._addText('วิธีเล่น', W / 2, boxY + 80, this._tierSize({ phone: 56, tablet: 41, desktop: 44 }), [255, 230, 109]);
+        this._addText('ตัวเลขจะตกลงมาจากด้านบน', W / 2, boxY + 190, this._tierSize({ phone: 34, tablet: 22, desktop: 24 }), [255, 255, 255]);
+        this._addText('คลิก/แตะคำตอบที่ถูกต้อง', W / 2, boxY + 260, this._tierSize({ phone: 34, tablet: 22, desktop: 24 }), [255, 255, 255]);
+        this._addText('ตอบผิดจะเสียชีวิต ตอบถูกติดต่อกันจะได้ Combo!', W / 2, boxY + 330, this._tierSize({ phone: 28, tablet: 20, desktop: 22 }), [255, 200, 100]);
         // ปุ่มเริ่ม
-        const okW = 200, okH = 50;
-        const okX = W / 2 - okW / 2, okY = boxY + boxH - 70;
+        const okW = this._tierSize({ phone: 360, tablet: 200, desktop: 200 });
+        const okH = this._tierSize({ phone: 80, tablet: 50, desktop: 50 });
+        const okX = W / 2 - okW / 2, okY = boxY + boxH - 110;
         this._addRect(okX, okY, okW, okH, [100, 220, 100], 10);
-        this._addText('เริ่มเล่น!', W / 2, okY + okH / 2 + 2, 22, [255, 255, 255]);
+        this._addText('เริ่มเล่น!', W / 2, okY + okH / 2 + 2, this._tierSize({ phone: 36, tablet: 22, desktop: 22 }), [255, 255, 255]);
         this._addClickable(okX, okY, okW, okH, () => {
             this._clearAll();
             this._drawGameSceneNoTutorial();
@@ -794,27 +795,27 @@ export class GameEngine {
         this.gameRunning = true;
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
-        const hudY = this._tierSize({ phone: 36, tablet: 44, desktop: 50 });
-        const hudSize = this._tierSize({ phone: 20, tablet: 24, desktop: 26 });
-        this.scoreTextObj = this._addText('Score: 0', this._tierSize({ phone: 90, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
-        this.livesTextObj = this._addText('Lives: 3', W - this._tierSize({ phone: 90, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
-        this.comboTextObj = this._addText('', W / 2, this._tierSize({ phone: 68, tablet: 76, desktop: 85 }), this._tierSize({ phone: 18, tablet: 20, desktop: 22 }), [255, 215, 0]);
-        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - this._tierSize({ phone: 28, tablet: 24, desktop: 20 }), this._tierSize({ phone: 18, tablet: 19, desktop: 20 }), [255, 255, 255]);
-        const backW = this._tierSize({ phone: 64, tablet: 72, desktop: 70 });
-        const backH = this._tierSize({ phone: 32, tablet: 36, desktop: 34 });
+        const hudY = this._tierSize({ phone: 60, tablet: 44, desktop: 50 });
+        const hudSize = this._tierSize({ phone: 36, tablet: 24, desktop: 26 });
+        this.scoreTextObj = this._addText('Score: 0', this._tierSize({ phone: 160, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
+        this.livesTextObj = this._addText('Lives: 3', W - this._tierSize({ phone: 160, tablet: 130, desktop: 160 }), hudY, hudSize, [255, 255, 255]);
+        this.comboTextObj = this._addText('', W / 2, this._tierSize({ phone: 104, tablet: 76, desktop: 85 }), this._tierSize({ phone: 30, tablet: 20, desktop: 22 }), [255, 215, 0]);
+        this.progressTextObj = this._addText('ข้อที่ 0 / 10', W / 2, H - this._tierSize({ phone: 48, tablet: 24, desktop: 20 }), this._tierSize({ phone: 32, tablet: 19, desktop: 20 }), [255, 255, 255]);
+        const backW = this._tierSize({ phone: 120, tablet: 72, desktop: 70 });
+        const backH = this._tierSize({ phone: 56, tablet: 36, desktop: 34 });
         this._addRect(8, 8, backW, backH, [80, 80, 120], 6);
-        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, this._tierSize({ phone: 14, tablet: 15, desktop: 17 }), [255, 255, 255]);
+        this._addText('BACK', 8 + backW / 2, 8 + backH / 2 + 2, this._tierSize({ phone: 26, tablet: 15, desktop: 17 }), [255, 255, 255]);
         this._addClickable(8, 8, backW, backH, () => this.k.go('main-menu'));
-        const pauseW = this._tierSize({ phone: 64, tablet: 68, desktop: 70 });
-        const pauseH = this._tierSize({ phone: 32, tablet: 36, desktop: 34 });
+        const pauseW = this._tierSize({ phone: 120, tablet: 68, desktop: 70 });
+        const pauseH = this._tierSize({ phone: 56, tablet: 36, desktop: 34 });
         const pauseX = W - pauseW - 8;
         const pauseY = this._tierSize({ phone: 48, tablet: 60, desktop: 70 });
         this._addRect(pauseX, pauseY, pauseW, pauseH, [80, 80, 120], 6);
-        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, this._tierSize({ phone: 14, tablet: 15, desktop: 16 }), [255, 255, 255]);
+        this._addText('PAUSE', pauseX + pauseW / 2, pauseY + pauseH / 2 + 2, this._tierSize({ phone: 26, tablet: 15, desktop: 16 }), [255, 255, 255]);
         this._addClickable(pauseX, pauseY, pauseW, pauseH, () => this._togglePause());
         const muteBtnY = this._tierSize({ phone: 44, tablet: 50, desktop: 55 });
         this._addRect(8, muteBtnY, backW, backH, [60, 60, 90], 6);
-        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, this._tierSize({ phone: 12, tablet: 13, desktop: 14 }), [255, 255, 255]);
+        this._addText(this.uiManager.isMuted() ? 'MUTE' : 'SND', 8 + backW / 2, muteBtnY + backH / 2 + 2, this._tierSize({ phone: 22, tablet: 13, desktop: 14 }), [255, 255, 255]);
         this._addClickable(8, muteBtnY, backW, backH, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
@@ -842,16 +843,18 @@ export class GameEngine {
         const W = this.k.width();
         const H = this.k.height();
         const bg = this._addRect(0, 0, W, H, [0, 0, 0, 160], 0);
-        const title = this._addText('PAUSED', W / 2, H / 2 - 60, 60, [255, 255, 100]);
-        const btnW = 220, btnH = 60;
-        const rX = W / 2 - btnW - 20, rY = H / 2 + 10;
-        const resumeBtn = this._addRect(rX, rY, btnW, btnH, [100, 220, 100], 12);
-        const resumeTxt = this._addText('RESUME', rX + btnW / 2, rY + btnH / 2 + 2, 22, [255, 255, 255]);
-        this._addClickable(rX, rY, btnW, btnH, () => this._togglePause());
+        const title = this._addText('PAUSED', W / 2, H / 2 - this._tierSize({ phone: 120, tablet: 60, desktop: 60 }), this._tierSize({ phone: 80, tablet: 60, desktop: 60 }), [255, 255, 100]);
+        const pw = this._tierSize({ phone: 280, tablet: 220, desktop: 220 });
+        const ph = this._tierSize({ phone: 80, tablet: 60, desktop: 60 });
+        const pgap = this._tierSize({ phone: 30, tablet: 20, desktop: 20 });
+        const rX = W / 2 - pw - pgap, rY = H / 2 + 40;
+        const resumeBtn = this._addRect(rX, rY, pw, ph, [100, 220, 100], 12);
+        const resumeTxt = this._addText('RESUME', rX + pw / 2, rY + ph / 2 + 2, this._tierSize({ phone: 30, tablet: 22, desktop: 22 }), [255, 255, 255]);
+        this._addClickable(rX, rY, pw, ph, () => this._togglePause());
 
-        const mX = W / 2 + 20, mY = H / 2 + 10;
-        const menuBtn = this._addRect(mX, mY, btnW, btnH, [200, 200, 210], 12);
-        const menuTxt = this._addText('MENU', mX + btnW / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
+        const mX = W / 2 + pgap, mY = H / 2 + 40;
+        const menuBtn = this._addRect(mX, mY, pw, ph, [200, 200, 210], 12);
+        const menuTxt = this._addText('MENU', mX + pw / 2, mY + ph / 2 + 2, this._tierSize({ phone: 30, tablet: 22, desktop: 22 }), [0, 0, 0]);
         this._addClickable(mX, mY, btnW, btnH, () => {
             this.uiManager.paused = false;
             this.k.go('main-menu');
@@ -878,7 +881,7 @@ export class GameEngine {
         if (this.bossNotifyObj && this.bossNotifyObj.destroy) {
             try { this.bossNotifyObj.destroy(); } catch (e) { }
         }
-        this.bossNotifyObj = this._addText(msg, this.k.width() / 2, 360, 52, [255, 255, 100]);
+        this.bossNotifyObj = this._addText(msg, this.k.width() / 2, this._tierSize({ phone: 440, tablet: 360, desktop: 360 }), this._tierSize({ phone: 60, tablet: 52, desktop: 52 }), [255, 255, 100]);
         if (dur) setTimeout(() => {
             if (this.bossNotifyObj && this.bossNotifyObj.destroy) {
                 try { this.bossNotifyObj.destroy(); } catch (e) { }
@@ -958,10 +961,10 @@ export class GameEngine {
 
     _spawnFallingItems(options, correctAnswer, side) {
         const W = this.k.width();
-        const itemSize = this._tierSize({ phone: Math.min(72, (W - 48) / 6 - 8), tablet: 90, desktop: 110 });
-        const itemHeight = this._tierSize({ phone: 48, tablet: 52, desktop: 60 });
-        const gap = this._tierSize({ phone: 8, tablet: 16, desktop: 25 });
-        const textSize = this._tierSize({ phone: 22, tablet: 25, desktop: 28 });
+        const itemSize = this._tierSize({ phone: 120, tablet: 90, desktop: 110 });
+        const itemHeight = this._tierSize({ phone: 72, tablet: 52, desktop: 60 });
+        const gap = this._tierSize({ phone: 14, tablet: 16, desktop: 25 });
+        const textSize = this._tierSize({ phone: 40, tablet: 25, desktop: 28 });
 
         // สีสันหลากหลาย — สุ่มสีต่อเนื่อง
         const COLOR_PALETTE = [
@@ -1171,7 +1174,7 @@ export class GameEngine {
         if (this.comboTextObj) this.comboTextObj.text = c > 1 ? 'Combo x' + c + '!' : ' ';
         // Progress indicator
         if (this.progressTextObj) {
-            const inRound = this.questionCount % 10;
+            const inRound = this.questionCount > 0 ? ((this.questionCount - 1) % 10) + 1 : 0;
             this.progressTextObj.text = `ข้อที่ ${inRound} / 10`;
         }
     }
@@ -1272,17 +1275,18 @@ export class GameEngine {
         const H = this.k.height();
         this._addBackground();
         this._addRect(0, 0, W, H, [0, 0, 30, 120], 0);
-        this._addText('Settings', W / 2, 130, 60, [255, 255, 100]);
+        this._addText('Settings', W / 2, this._tierSize({ phone: 180, tablet: 130, desktop: 130 }), this._tierSize({ phone: 72, tablet: 60, desktop: 60 }), [255, 255, 100]);
 
-        const btnW = 220, btnH = 65;
+        const btnW = this._tierSize({ phone: 440, tablet: 220, desktop: 220 });
+        const btnH = this._tierSize({ phone: 96, tablet: 65, desktop: 65 });
         const diffConfig = this.config && this.config.difficulty ? this.config.difficulty.levels : null;
         for (let i = 0; i < 3; i++) {
             const d = i + 1;
-            const dX = W / 2 - btnW / 2, dY = 220 + i * 95;
+            const dX = W / 2 - btnW / 2, dY = this._tierSize({ phone: 300, tablet: 220, desktop: 220 }) + i * this._tierSize({ phone: 120, tablet: 95, desktop: 95 });
             const sel = d === this.currentDifficulty;
             this._addRect(dX, dY, btnW, btnH, sel ? [100, 220, 100] : [120, 120, 160], 12);
             const dLabel = diffConfig ? diffConfig[i].name : ('Difficulty ' + d);
-            this._addText(dLabel + (sel ? ' (เลือก)' : ''), W / 2, dY + btnH / 2 + 2, 24, [255, 255, 255]);
+            this._addText(dLabel + (sel ? ' (เลือก)' : ''), W / 2, dY + btnH / 2 + 2, this._tierSize({ phone: 34, tablet: 24, desktop: 24 }), [255, 255, 255]);
             this._addClickable(dX, dY, btnW, btnH, () => {
                 this.currentDifficulty = d;
                 this.k.go('settings');
@@ -1290,24 +1294,24 @@ export class GameEngine {
         }
 
         // Mute toggle
-        const muteY = 220 + 3 * 95;
+        const muteY = this._tierSize({ phone: 300, tablet: 220, desktop: 220 }) + 3 * this._tierSize({ phone: 120, tablet: 95, desktop: 95 });
         const muted = this.uiManager.isMuted();
         this._addRect(W / 2 - btnW / 2, muteY, btnW, btnH, muted ? [200, 100, 100] : [100, 180, 100], 12);
-        this._addText(muted ? 'เสียง: ปิด' : 'เสียง: เปิด', W / 2, muteY + btnH / 2 + 2, 24, [255, 255, 255]);
+        this._addText(muted ? 'เสียง: ปิด' : 'เสียง: เปิด', W / 2, muteY + btnH / 2 + 2, this._tierSize({ phone: 34, tablet: 24, desktop: 24 }), [255, 255, 255]);
         this._addClickable(W / 2 - btnW / 2, muteY, btnW, btnH, () => {
             this.uiManager.toggleMute();
             this.sound.enabled = !this.uiManager.isMuted();
             this.k.go('settings');
         });
 
-        const bX = W / 2 - btnW / 2, bY = muteY + 95;
+        const bX = W / 2 - btnW / 2, bY = muteY + this._tierSize({ phone: 120, tablet: 95, desktop: 95 });
         this._addRect(bX, bY, btnW, btnH, [255, 100, 100], 12);
-        this._addText('BACK', W / 2, bY + btnH / 2 + 2, 26, [255, 255, 255]);
+        this._addText('BACK', W / 2, bY + btnH / 2 + 2, this._tierSize({ phone: 34, tablet: 26, desktop: 26 }), [255, 255, 255]);
         this._addClickable(bX, bY, btnW, btnH, () => this.k.go('main-menu'));
 
-        const nameY = bY + btnH + 20;
+        const nameY = bY + btnH + this._tierSize({ phone: 28, tablet: 20, desktop: 20 });
         this._addRect(bX, nameY, btnW, btnH, [180, 140, 255], 12);
-        this._addText('เปลี่ยนชื่อเล่น', W / 2, nameY + btnH / 2 + 2, 22, [255, 255, 255]);
+        this._addText('เปลี่ยนชื่อเล่น', W / 2, nameY + btnH / 2 + 2, this._tierSize({ phone: 28, tablet: 22, desktop: 22 }), [255, 255, 255]);
         this._addClickable(bX, nameY, btnW, btnH, () => this.k.go('enter-name'));
     }
 
@@ -1327,14 +1331,14 @@ export class GameEngine {
             ? this.leaderboardService.getDifficultyLabel(this.currentDifficulty, this.config)
             : 'ง่าย';
 
-        this._addText('GAME OVER', W / 2, this._tierSize({ phone: 120, tablet: 140, desktop: 160 }), this._tierSize({ phone: 52, tablet: 60, desktop: 68 }), [255, 80, 80]);
-        this._addText('Score: ' + this.uiManager.getScore(), W / 2, this._tierSize({ phone: 190, tablet: 220, desktop: 250 }), this._tierSize({ phone: 32, tablet: 37, desktop: 42 }), [255, 255, 255]);
-        this._addText('ระดับ: ' + diffName, W / 2, this._tierSize({ phone: 230, tablet: 265, desktop: 300 }), this._tierSize({ phone: 22, tablet: 25, desktop: 28 }), [255, 215, 0]);
-        this._addText('Level สูงสุด: ' + this.uiManager.getLevel(), W / 2, this._tierSize({ phone: 265, tablet: 302, desktop: 340 }), this._tierSize({ phone: 22, tablet: 25, desktop: 28 }), [255, 200, 100]);
-        this._addText('Max Combo: ' + this.uiManager.getMaxCombo(), W / 2, this._tierSize({ phone: 300, tablet: 340, desktop: 380 }), this._tierSize({ phone: 20, tablet: 22, desktop: 24 }), [255, 200, 100]);
+        this._addText('GAME OVER', W / 2, this._tierSize({ phone: 160, tablet: 140, desktop: 160 }), this._tierSize({ phone: 72, tablet: 60, desktop: 68 }), [255, 80, 80]);
+        this._addText('Score: ' + this.uiManager.getScore(), W / 2, this._tierSize({ phone: 270, tablet: 220, desktop: 250 }), this._tierSize({ phone: 48, tablet: 37, desktop: 42 }), [255, 255, 255]);
+        this._addText('ระดับ: ' + diffName, W / 2, this._tierSize({ phone: 340, tablet: 265, desktop: 300 }), this._tierSize({ phone: 36, tablet: 25, desktop: 28 }), [255, 215, 0]);
+        this._addText('Level สูงสุด: ' + this.uiManager.getLevel(), W / 2, this._tierSize({ phone: 400, tablet: 302, desktop: 340 }), this._tierSize({ phone: 34, tablet: 25, desktop: 28 }), [255, 200, 100]);
+        this._addText('Max Combo: ' + this.uiManager.getMaxCombo(), W / 2, this._tierSize({ phone: 460, tablet: 340, desktop: 380 }), this._tierSize({ phone: 34, tablet: 22, desktop: 24 }), [255, 200, 100]);
 
-        const rankY = this._tierSize({ phone: 335, tablet: 378, desktop: 420 });
-        const rankTextObj = this._addText('กำลังบันทึกคะแนน...', W / 2, rankY, this._tierSize({ phone: 20, tablet: 22, desktop: 24 }), [100, 220, 100]);
+        const rankY = this._tierSize({ phone: 520, tablet: 378, desktop: 420 });
+        const rankTextObj = this._addText('กำลังบันทึกคะแนน...', W / 2, rankY, this._tierSize({ phone: 32, tablet: 22, desktop: 24 }), [100, 220, 100]);
 
         this._submitGameResult().then((rank) => {
             if (rankTextObj) {
@@ -1346,34 +1350,34 @@ export class GameEngine {
 
         const hs = this.uiManager.getHighScore();
         if (hs > 0) {
-            this._addText('High Score: ' + hs, W / 2, this._tierSize({ phone: 370, tablet: 415, desktop: 460 }), this._tierSize({ phone: 20, tablet: 23, desktop: 26 }), [255, 215, 0]);
+            this._addText('High Score: ' + hs, W / 2, this._tierSize({ phone: 580, tablet: 415, desktop: 460 }), this._tierSize({ phone: 34, tablet: 23, desktop: 26 }), [255, 215, 0]);
         }
 
-        const btnW = this._tierSize({ phone: Math.min(240, W - 48), tablet: Math.min(260, W - 48), desktop: 200 });
-        const btnH = this._tierSize({ phone: 54, tablet: 57, desktop: 60 });
-        const btnY = this._tierSize({ phone: H - 140, tablet: H - 180, desktop: 450 });
+        const btnW = this._tierSize({ phone: Math.min(440, W - 48), tablet: Math.min(260, W - 48), desktop: 200 });
+        const btnH = this._tierSize({ phone: 84, tablet: 57, desktop: 60 });
+        const btnY = this._tierSize({ phone: 720, tablet: H - 180, desktop: 450 });
 
         if (tier !== 'desktop') {
             const pX = W / 2 - btnW / 2;
             this._addRect(pX, btnY, btnW, btnH, [100, 220, 100], 12);
-            this._addText('เล่นอีกครั้ง', W / 2, btnY + btnH / 2 + 2, 22, [255, 255, 255]);
+            this._addText('เล่นอีกครั้ง', W / 2, btnY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 22, desktop: 22 }), [255, 255, 255]);
             this._addClickable(pX, btnY, btnW, btnH, () => {
                 this.questionCount = 0; this.isBoss = false; this.k.go('game');
             });
-            const mY = btnY + btnH + 12;
+            const mY = btnY + btnH + 16;
             this._addRect(pX, mY, btnW, btnH, [200, 200, 210], 12);
-            this._addText('MENU', W / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
+            this._addText('MENU', W / 2, mY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 22, desktop: 22 }), [0, 0, 0]);
             this._addClickable(pX, mY, btnW, btnH, () => this.k.go('main-menu'));
         } else {
             const pX = W / 2 - btnW - 20, pY = btnY;
             this._addRect(pX, pY, btnW, btnH, [100, 220, 100], 12);
-            this._addText('เล่นอีกครั้ง', pX + btnW / 2, pY + btnH / 2 + 2, 22, [255, 255, 255]);
+            this._addText('เล่นอีกครั้ง', pX + btnW / 2, pY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 22, desktop: 22 }), [255, 255, 255]);
             this._addClickable(pX, pY, btnW, btnH, () => {
                 this.questionCount = 0; this.isBoss = false; this.k.go('game');
             });
             const mX = W / 2 + 20, mY = btnY;
             this._addRect(mX, mY, btnW, btnH, [200, 200, 210], 12);
-            this._addText('MENU', mX + btnW / 2, mY + btnH / 2 + 2, 22, [0, 0, 0]);
+            this._addText('MENU', mX + btnW / 2, mY + btnH / 2 + 2, this._tierSize({ phone: 36, tablet: 22, desktop: 22 }), [0, 0, 0]);
             this._addClickable(mX, mY, btnW, btnH, () => this.k.go('main-menu'));
         }
     }
